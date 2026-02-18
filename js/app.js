@@ -56,7 +56,7 @@ async function searchStockCodeByName(name) {
 createApp({
   setup() {
     // Original state
-    const ao = ref(0);
+    const a0 = ref(0);
     const ma5 = reactive({ a5: 0, ma5_1: 0, result: 0 });
     const ma10 = reactive({ a10: 0, ma10_1: 0, result: 0 });
     const ma20 = reactive({ a20: 0, ma20_1: 0, result: 0 });
@@ -224,7 +224,7 @@ createApp({
         const data = await adapter.fetchStockData(actualCode, apiConfig.apiKey);
 
         // Auto-fill all fields
-        ao.value = data.current;
+        a0.value = data.current;
         ma5.a5 = data.a5;
         ma5.ma5_1 = data.ma5_1;
         ma10.a10 = data.a10;
@@ -256,15 +256,15 @@ createApp({
 
     // Original calculation functions
     const calculateMA5 = () => {
-      ma5.result = (ma5.ma5_1 * 5 - ma5.a5 + ao.value) / 5;
+      ma5.result = (ma5.ma5_1 * 5 - ma5.a5 + a0.value) / 5;
     };
 
     const calculateMA10 = () => {
-      ma10.result = (ma10.ma10_1 * 10 - ma10.a10 + ao.value) / 10;
+      ma10.result = (ma10.ma10_1 * 10 - ma10.a10 + a0.value) / 10;
     };
 
     const calculateMA20 = () => {
-      ma20.result = (ma20.ma20_1 * 20 - ma20.a20 + ao.value) / 20;
+      ma20.result = (ma20.ma20_1 * 20 - ma20.a20 + a0.value) / 20;
     };
 
     // Load saved config on mount
@@ -273,7 +273,7 @@ createApp({
     });
 
     return {
-      ao,
+      a0,
       ma5,
       ma10,
       ma20,

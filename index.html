@@ -32,7 +32,7 @@
         <div class="bg-white rounded-lg shadow-md p-5 mb-6">
             <h3 class="text-gray-700 font-bold mb-3"><i class="fas fa-info-circle mr-2"></i>参数说明</h3>
             <div class="text-gray-600 text-sm space-y-2">
-                <p><strong class="text-blue-600">AO</strong>：下个交易日的盘中实时价格</p>
+                <p><strong class="text-blue-600">A0</strong>：下个交易日的盘中实时价格</p>
                 <p><strong class="text-blue-600">A5/A10/A20</strong>：向前数 N 天的收盘价</p>
                 <p><strong class="text-blue-600">MA5_1/MA10_1/MA20_1</strong>：今天收盘后的 N 日均线</p>
             </div>
@@ -158,10 +158,10 @@
 
         </div>
 
-        <!-- Global AO -->
+        <!-- Global A0 -->
         <div class="bg-white rounded-lg shadow-md p-5 mb-6">
-            <label class="block text-gray-700 font-medium mb-2">AO（明日盘中实时价格）</label>
-            <input type="number" v-model.number="ao" step="0.01"
+            <label class="block text-gray-700 font-medium mb-2">A0（明日盘中实时价格）</label>
+            <input type="number" v-model.number="a0" step="0.01"
                 class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                 placeholder="输入明日盘中实时价格">
         </div>
