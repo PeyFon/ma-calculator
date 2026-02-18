@@ -3,8 +3,9 @@ const { createApp, ref, reactive, onMounted, watch } = Vue;
 // CORS 代理（用于腾讯接口）
 const CORS_PROXY = "https://corsproxy.io/?";
 
-// 解码Unicode转义序列（如 \u6e56\u5317 -> 湖北）
+// 解码Unicode转义序列
 function decodeUnicode(str) {
+  if (!str) return "";
   return str.replace(/\\u([0-9a-fA-F]{4})/g, (match, hex) => {
     return String.fromCharCode(parseInt(hex, 16));
   });
@@ -12,38 +13,30 @@ function decodeUnicode(str) {
 
 // 通过腾讯财经接口查询股票代码（支持中文名称搜索）
 async function searchStockCodeByName(name, market) {
-  // 腾讯财经搜索接口（通过CORS代理）
   const targetUrl = `https://smartbox.gtimg.cn/s3/?q=${encodeURIComponent(name)}&t=all`;
   const searchUrl = `${CORS_PROXY}${encodeURIComponent(targetUrl)}`;
 
   try {
     const response = await fetch(searchUrl);
     const text = await response.text();
-
-    // 解析返回数据，格式: v_hint="entry1^entry2^..."
     const match = text.match(/v_hint="([^"]+)"/);
     if (!match) return null;
 
-    // 条目以 ^ 分隔，每条格式: 市场~代码~名称~拼音~类型
     const entries = match[1].split('^');
-
     for (const entry of entries) {
       if (!entry.trim()) continue;
       const parts = entry.split('~');
-
       if (parts.length >= 5) {
-        const prefix = parts[0];    // sh, sz, hk, us
-        const codeNum = parts[1];   // 00700, 600519
+        const prefix = parts[0];
+        const codeNum = parts[1];
         const stockName = decodeUnicode(parts[2]);
-        const stockType = parts[4]; // GP=股票, ZS=指数, QZ=权证
+        const stockType = parts[4];
 
         if (market === 'HK') {
-          // 港股：前缀 hk，类型 GP，代码纯数字（通常4-5位）
           if (prefix === 'hk' && stockType === 'GP' && /^\d{4,5}$/.test(codeNum)) {
             return { code: codeNum, name: stockName, fullCode: prefix + codeNum };
           }
         } else {
-          // A股：前缀 sh/sz，代码6位数字
           if ((prefix === 'sh' || prefix === 'sz') && /^\d{6}$/.test(codeNum)) {
             return { code: codeNum, name: stockName, fullCode: prefix + codeNum };
           }
@@ -59,41 +52,84 @@ async function searchStockCodeByName(name, market) {
 
 createApp({
   setup() {
-    // Original state
+    // 1. 基础响应式状态
     const a0 = ref(0);
     const ma5 = reactive({ a5: 0, ma5_1: 0, result: 0 });
     const ma10 = reactive({ a10: 0, ma10_1: 0, result: 0 });
     const ma20 = reactive({ a20: 0, ma20_1: 0, result: 0 });
 
-    // 股票信息
     const stockInfo = reactive({
-      name: "",
-      code: "",
-      high: 0,
-      low: 0,
-      open: 0,
-      close: 0
+      name: "", code: "", high: 0, low: 0, open: 0, close: 0
     });
 
-    // API integration state
     const showConfig = ref(false);
     const stockCode = ref("");
-    const market = ref("CN");  // CN=A股, HK=港股
+    const market = ref("CN");
     const loading = ref(false);
     const error = ref("");
     const configSaved = ref(false);
     const dataFetched = ref(false);
-
-    // 搜索历史（最近5条，持久化到localStorage）
     const searchHistory = ref([]);
 
+    const apiConfig = reactive({
+      provider: "alltick",
+      apiKey: ""
+    });
+
+    const API_URLS = {
+      alltick: "https://alltick.co/",
+      itick: "https://itick.org/"
+    };
+
+    const currentApiUrl = Vue.computed(() => API_URLS[apiConfig.provider] || "");
+
+    const apiKeys = reactive({
+      alltick: "",
+      itick: ""
+    });
+
+    // 2. 核心计算方法
+    const calculateMA5 = () => { ma5.result = (ma5.ma5_1 * 5 - ma5.a5 + a0.value) / 5; };
+    const calculateMA10 = () => { ma10.result = (ma10.ma10_1 * 10 - ma10.a10 + a0.value) / 10; };
+    const calculateMA20 = () => { ma20.result = (ma20.ma20_1 * 20 - ma20.a20 + a0.value) / 20; };
+
+    // 3. 配置管理
+    const loadApiConfig = () => {
+      try {
+        const saved = localStorage.getItem("ma-calculator-api-config");
+        if (saved) {
+          const config = JSON.parse(saved);
+          if (config.provider) apiConfig.provider = config.provider;
+          if (config.apiKeys) {
+            Object.assign(apiKeys, config.apiKeys);
+            apiConfig.apiKey = apiKeys[apiConfig.provider] || "";
+          }
+        }
+      } catch (e) {}
+    };
+
+    const saveApiConfig = () => {
+      try {
+        apiKeys[apiConfig.provider] = apiConfig.apiKey;
+        const config = { provider: apiConfig.provider, apiKeys: { ...apiKeys } };
+        localStorage.setItem("ma-calculator-api-config", JSON.stringify(config));
+        return true;
+      } catch (e) { return false; }
+    };
+
+    const saveConfig = () => {
+      if (saveApiConfig()) {
+        configSaved.value = true;
+        setTimeout(() => { configSaved.value = false; }, 3000);
+      }
+    };
+
+    // 4. 搜索历史管理
     const loadSearchHistory = () => {
       try {
         const saved = localStorage.getItem('ma-calculator-search-history');
         if (saved) searchHistory.value = JSON.parse(saved);
-      } catch (e) {
-        searchHistory.value = [];
-      }
+      } catch (e) { searchHistory.value = []; }
     };
 
     const saveSearchHistory = () => {
@@ -101,13 +137,10 @@ createApp({
     };
 
     const addSearchHistory = (code, name, historyMarket) => {
-      // 去重（同代码同市场视为重复）
       searchHistory.value = searchHistory.value.filter(
         item => !(item.code === code && item.market === historyMarket)
       );
-      // 头部插入
       searchHistory.value.unshift({ code, name, market: historyMarket, time: Date.now() });
-      // 保留最近5条
       if (searchHistory.value.length > 5) searchHistory.value = searchHistory.value.slice(0, 5);
       saveSearchHistory();
     };
@@ -117,143 +150,30 @@ createApp({
       saveSearchHistory();
     };
 
-    const useSearchHistory = (item) => {
-      market.value = item.market;
-      stockCode.value = item.code;
-      fetchStockData();
-    };
-
-    const apiConfig = reactive({
-      provider: "alltick", // 默认 AllTick
-      apiKey: ""
-    });
-
-    // API 提供商地址映射
-    const API_URLS = {
-      alltick: "https://alltick.co/",
-      itick: "https://itick.org/"
-    };
-
-    // 当前选择的 API 地址
-    const currentApiUrl = Vue.computed(() => {
-      return API_URLS[apiConfig.provider] || "";
-    });
-
-    // 存储所有服务商的API Keys
-    const apiKeys = reactive({
-      alltick: "",
-      itick: ""
-    });
-
-    // 从localStorage加载配置
-    const loadApiConfig = () => {
-      try {
-        const saved = localStorage.getItem("ma-calculator-api-config");
-        if (saved) {
-          const config = JSON.parse(saved);
-
-          // 加载provider
-          if (config.provider) {
-            apiConfig.provider = config.provider;
-          }
-
-          // 加载所有服务商的keys
-          if (config.apiKeys) {
-            Object.assign(apiKeys, config.apiKeys);
-            // 设置当前provider的key
-            apiConfig.apiKey = apiKeys[apiConfig.provider] || "";
-          }
-        }
-      } catch (e) {
-        console.error("Failed to load config:", e);
-      }
-    };
-
-    // 保存配置到localStorage
-    const saveApiConfig = () => {
-      try {
-        // 先保存当前provider的key到apiKeys对象
-        apiKeys[apiConfig.provider] = apiConfig.apiKey;
-
-        const config = {
-          provider: apiConfig.provider,
-          apiKeys: { ...apiKeys }
-        };
-
-        localStorage.setItem(
-          "ma-calculator-api-config",
-          JSON.stringify(config)
-        );
-        return true;
-      } catch (e) {
-        console.error("Failed to save config:", e);
-        return false;
-      }
-    };
-
-    // 监听provider变化，自动切换对应的apiKey
-    watch(
-      () => apiConfig.provider,
-      newProvider => {
-        apiConfig.apiKey = apiKeys[newProvider] || "";
-      }
-    );
-
-    // Save configuration
-    const saveConfig = () => {
-      if (saveApiConfig()) {
-        configSaved.value = true;
-        setTimeout(() => {
-          configSaved.value = false;
-        }, 3000);
-      }
-    };
-
-    // Fetch stock data from API
+    // 5. 数据抓取逻辑
     const fetchStockData = async () => {
-      if (!apiConfig.apiKey) {
-        error.value = "请先配置API Key";
-        return;
-      }
+      if (!apiConfig.apiKey) { error.value = "请先配置API Key"; return; }
+      if (!stockCode.value) { error.value = "请输入股票代码"; return; }
 
-      if (!stockCode.value) {
-        error.value = "请输入股票代码";
-        return;
-      }
-
-      // 获取输入内容
       let actualCode = stockCode.value.trim();
       let searchedName = "";
       const currentMarket = market.value;
 
-      // 检查是否是中文名称（包含中文）
       if (/[\u4e00-\u9fa5]/.test(actualCode)) {
-        // 通过腾讯接口搜索股票代码
         error.value = "正在搜索股票...";
         const searchResult = await searchStockCodeByName(actualCode, currentMarket);
-
         if (!searchResult) {
-          error.value = `未找到"${actualCode}"对应的${currentMarket === 'HK' ? '港股' : 'A股'}，请输入准确的公司名称或股票代码`;
+          error.value = `未找到"${actualCode}"对应的${currentMarket === 'HK' ? '港股' : 'A股'}`;
           return;
         }
-
         actualCode = searchResult.code;
         searchedName = searchResult.name;
       }
 
-      // 验证股票代码格式
       if (currentMarket === 'HK') {
-        // 港股代码：4-5位数字
-        if (!/^\d{4,5}$/.test(actualCode)) {
-          error.value = "港股代码必须是4-5位数字（如 00700）";
-          return;
-        }
+        if (!/^\d{4,5}$/.test(actualCode)) { error.value = "港股代码格式错误"; return; }
       } else {
-        // A股代码：6位数字
-        if (!/^\d{6}$/.test(actualCode)) {
-          error.value = "A股代码必须是6位数字";
-          return;
-        }
+        if (!/^\d{6}$/.test(actualCode)) { error.value = "A股代码格式错误"; return; }
       }
 
       loading.value = true;
@@ -261,48 +181,29 @@ createApp({
       dataFetched.value = false;
 
       try {
+        if (typeof AdapterFactory === 'undefined') {
+          throw new Error("数据组件未就绪，请刷新页面重试");
+        }
         const adapter = AdapterFactory.create(apiConfig.provider);
-
-        // 先查股票名称（可选，失败不阻塞）
         let stockName = null;
         try {
-          stockName = await adapter.fetchStockName(
-            actualCode,
-            apiConfig.apiKey,
-            currentMarket
-          );
-        } catch (e) {
-          // 忽略名称查询错误
-        }
+          stockName = await adapter.fetchStockName(actualCode, apiConfig.apiKey, currentMarket);
+        } catch (e) {}
 
-        // 再查K线数据
         const data = await adapter.fetchStockData(actualCode, apiConfig.apiKey, currentMarket);
 
-        // Auto-fill all fields
         a0.value = data.current;
-        ma5.a5 = data.a5;
-        ma5.ma5_1 = data.ma5_1;
-        ma10.a10 = data.a10;
-        ma10.ma10_1 = data.ma10_1;
-        ma20.a20 = data.a20;
-        ma20.ma20_1 = data.ma20_1;
+        ma5.a5 = data.a5; ma5.ma5_1 = data.ma5_1;
+        ma10.a10 = data.a10; ma10.ma10_1 = data.ma10_1;
+        ma20.a20 = data.a20; ma20.ma20_1 = data.ma20_1;
 
-        // 填充股票信息（优先用搜索到的名称，其次用API返回的）
         stockInfo.code = data.stockCode || actualCode;
         stockInfo.name = searchedName || stockName || data.stockName || "";
-        stockInfo.high = data.high || 0;
-        stockInfo.low = data.low || 0;
-        stockInfo.open = data.open || 0;
-        stockInfo.close = data.close || 0;
+        stockInfo.high = data.high; stockInfo.low = data.low;
+        stockInfo.open = data.open; stockInfo.close = data.close;
 
-        // 自动计算所有均线
-        calculateMA5();
-        calculateMA10();
-        calculateMA20();
-
-        // 记录搜索历史
+        calculateMA5(); calculateMA10(); calculateMA20();
         addSearchHistory(actualCode, stockInfo.name || actualCode, currentMarket);
-
         dataFetched.value = true;
       } catch (e) {
         error.value = `获取失败: ${e.message}`;
@@ -312,48 +213,28 @@ createApp({
       }
     };
 
-    // Original calculation functions
-    const calculateMA5 = () => {
-      ma5.result = (ma5.ma5_1 * 5 - ma5.a5 + a0.value) / 5;
+    const useSearchHistory = (item) => {
+      market.value = item.market;
+      stockCode.value = item.code;
+      fetchStockData();
     };
 
-    const calculateMA10 = () => {
-      ma10.result = (ma10.ma10_1 * 10 - ma10.a10 + a0.value) / 10;
-    };
+    // 6. 监听与生命周期
+    watch(() => apiConfig.provider, (newProvider) => {
+      apiConfig.apiKey = apiKeys[newProvider] || "";
+    });
 
-    const calculateMA20 = () => {
-      ma20.result = (ma20.ma20_1 * 20 - ma20.a20 + a0.value) / 20;
-    };
-
-    // Load saved config on mount
     onMounted(() => {
       loadApiConfig();
       loadSearchHistory();
     });
 
     return {
-      a0,
-      ma5,
-      ma10,
-      ma20,
-      calculateMA5,
-      calculateMA10,
-      calculateMA20,
-      showConfig,
-      stockCode,
-      market,
-      loading,
-      error,
-      configSaved,
-      dataFetched,
-      apiConfig,
-      saveConfig,
-      fetchStockData,
-      stockInfo,
-      currentApiUrl,
-      searchHistory,
-      removeSearchHistory,
-      useSearchHistory
+      a0, ma5, ma10, ma20, stockInfo, showConfig, stockCode, market,
+      loading, error, configSaved, dataFetched, searchHistory, apiConfig,
+      currentApiUrl, calculateMA5, calculateMA10, calculateMA20, saveConfig,
+      fetchStockData, removeSearchHistory, useSearchHistory
     };
   }
 }).mount("#app");
+
