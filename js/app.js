@@ -89,9 +89,15 @@ createApp({
     });
 
     // 2. 核心计算方法
-    const calculateMA5 = () => { ma5.result = (ma5.ma5_1 * 5 - ma5.a5 + a0.value) / 5; };
-    const calculateMA10 = () => { ma10.result = (ma10.ma10_1 * 10 - ma10.a10 + a0.value) / 10; };
-    const calculateMA20 = () => { ma20.result = (ma20.ma20_1 * 20 - ma20.a20 + a0.value) / 20; };
+    const calculateMA5 = () => { ma5.result = (ma5.ma5_1 * 5 - ma5.a5 + (a0.value || 0)) / 5; };
+    const calculateMA10 = () => { ma10.result = (ma10.ma10_1 * 10 - ma10.a10 + (a0.value || 0)) / 10; };
+    const calculateMA20 = () => { ma20.result = (ma20.ma20_1 * 20 - ma20.a20 + (a0.value || 0)) / 20; };
+
+    const calculateAll = () => {
+      calculateMA5();
+      calculateMA10();
+      calculateMA20();
+    };
 
     // 3. 配置管理
     const loadApiConfig = () => {
@@ -141,7 +147,8 @@ createApp({
         item => !(item.code === code && item.market === historyMarket)
       );
       searchHistory.value.unshift({ code, name, market: historyMarket, time: Date.now() });
-      if (searchHistory.value.length > 5) searchHistory.value = searchHistory.value.slice(0, 5);
+      // 保留最近6条
+      if (searchHistory.value.length > 6) searchHistory.value = searchHistory.value.slice(0, 6);
       saveSearchHistory();
     };
 
@@ -232,7 +239,7 @@ createApp({
     return {
       a0, ma5, ma10, ma20, stockInfo, showConfig, stockCode, market,
       loading, error, configSaved, dataFetched, searchHistory, apiConfig,
-      currentApiUrl, calculateMA5, calculateMA10, calculateMA20, saveConfig,
+      currentApiUrl, calculateMA5, calculateMA10, calculateMA20, calculateAll, saveConfig,
       fetchStockData, removeSearchHistory, useSearchHistory
     };
   }
