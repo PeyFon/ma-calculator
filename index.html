@@ -5,13 +5,12 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>实时均线计算器</title>
-    <!-- 方案 B: 消除 favicon.ico 404 报错 -->
     <link rel="icon" href="data:;base64,iVBORw0KGgo=">
     <!-- Tailwind CSS Latest CDN with Fallback logic -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
         // CDN Fallback for Tailwind (if the script fails to load, it won't be defined)
-        window.addEventListener('error', function(e) {
+        window.addEventListener('error', function (e) {
             if (e.target.src && e.target.src.includes('tailwindcss.com')) {
                 console.warn('Tailwind CDN failed, loading fallback...');
                 var fallback = document.createElement('script');
@@ -20,10 +19,9 @@
             }
         }, true);
     </script>
-    
+
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css" rel="stylesheet">
-    
-    <!-- Vue 3 with Fallback (方案 C: 使用生产版本 .prod.js) -->
+
     <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
     <script>
         if (!window.Vue) {
@@ -31,307 +29,457 @@
         }
     </script>
     <script src="js/api-adapters.js"></script>
-    <!-- 方案 A: 已删除 key.js 引用，消除 404 报错 -->
 </head>
 
-<body class="bg-gray-100 py-6 px-4">
-    <div id="app" class="max-w-xl mx-auto">
-        <h1 class="text-3xl font-bold text-green-600 text-center mb-2">实时均线计算器</h1>
-        <!-- <p class="text-center text-gray-500 mb-6">作者：小红他叔</p> -->
+<body
+    class="bg-slate-50 py-8 px-4 font-sans text-slate-600 antialiased selection:bg-indigo-100 selection:text-indigo-700">
+    <div id="app" class="max-w-2xl mx-auto">
+        <!-- Header -->
+        <header class="text-center mb-8">
+            <h1 class="text-3xl font-bold text-slate-800 tracking-tight mb-2">实时均线计算器</h1>
+        </header>
 
-        <!-- Disclaimer -->
-        <div class="bg-white rounded-lg shadow-md p-5 mb-6">
-            <h3 class="text-red-600 font-bold mb-3"><i class="fas fa-exclamation-triangle mr-2"></i>免责声明</h3>
-            <div class="text-gray-600 text-sm space-y-2">
-                <p>（1）本工具采用标准化算术移动平均线（MA）的正向计算规则，所有统计过程均基于已发生的历史客观数据。</p>
-                <p>（2）本工具输出的均线统计结果仅供参考素材，<strong class="text-red-500">不构成任何形式的投资建议</strong>。</p>
-                <p>（3）本工具不对统计结果的准确性作出任何保证，所有投资决策由用户独立作出，<strong class="text-red-500">需自行承担全部风险与责任</strong>。</p>
-                <p>（4）本工具<strong class="text-green-600">完全免费使用</strong>，任何收费行为均与工具开发方无关。</p>
+        <!-- Disclaimer & Parameters Group -->
+        <div class="grid md:grid-cols-2 gap-4 mb-8">
+            <!-- Disclaimer -->
+            <div
+                class="bg-white rounded-xl shadow-sm border border-slate-200 p-5 hover:shadow-md transition-shadow duration-300">
+                <h3 class="text-rose-600 font-bold mb-3 flex items-center text-sm uppercase tracking-wider">
+                    <i class="fas fa-shield-alt mr-2"></i>免责声明
+                </h3>
+                <div class="text-slate-500 text-xs leading-relaxed space-y-2">
+                    <p>（1）本工具采用标准化算术移动平均线（MA）的正向计算规则，所有统计过程均基于已发生的历史客观数据。</p>
+                    <p>（2）本工具输出的均线统计结果仅供参考素材，<strong class="text-rose-500">不构成任何形式的投资建议</strong>。</p>
+                    <p>（3）本工具不对统计结果的准确性作出任何保证，所有投资决策由用户独立作出，<strong class="text-rose-500">需自行承担全部风险与责任</strong>。</p>
+                    <p>（4）本工具<strong class="text-emerald-600">完全免费使用</strong>，任何收费行为均与工具开发方无关。</p>
+                </div>
             </div>
-        </div>
 
-        <!-- Parameters -->
-        <div class="bg-white rounded-lg shadow-md p-5 mb-6">
-            <h3 class="text-gray-700 font-bold mb-3"><i class="fas fa-info-circle mr-2"></i>参数说明</h3>
-            <div class="text-gray-600 text-sm space-y-2">
-                <p><strong class="text-blue-600">A0</strong>：下个交易日的盘中实时价格</p>
-                <p><strong class="text-blue-600">A5/A10/A20</strong>：向前数 N 天的价格</p>
-                <p><strong class="text-blue-600">MA5_1/MA10_1/MA20_1</strong>：今天收盘后的 N 日均线</p>
+            <!-- Parameters -->
+            <div
+                class="bg-white rounded-xl shadow-sm border border-slate-200 p-5 hover:shadow-md transition-shadow duration-300">
+                <h3 class="text-slate-800 font-semibold mb-3 flex items-center text-sm uppercase tracking-wider">
+                    <i class="fas fa-code-branch mr-2 text-indigo-500"></i>参数定义
+                </h3>
+                <div class="text-slate-500 text-xs leading-relaxed space-y-2 font-mono">
+                    <div class="flex justify-between items-center border-b border-slate-50 pb-1">
+                        <span class="text-indigo-600 font-bold">A0</span>
+                        <span>下个交易日盘中价</span>
+                    </div>
+                    <div class="flex justify-between items-center border-b border-slate-50 pb-1">
+                        <span class="text-indigo-600 font-bold">An</span>
+                        <span>前 N 日收盘价</span>
+                    </div>
+                    <div class="flex justify-between items-center">
+                        <span class="text-indigo-600 font-bold">MA_n</span>
+                        <span>N 日移动平均线</span>
+                    </div>
+                </div>
             </div>
         </div>
 
         <!-- API Configuration -->
-        <div class="bg-white rounded-lg shadow-md p-5 mb-6">
-            <div class="flex items-center justify-between cursor-pointer" @click="showConfig = !showConfig">
-                <h3 class="text-gray-700 font-bold"><i class="fas fa-cog mr-2"></i>配置API</h3>
-                <i :class="showConfig ? 'fas fa-chevron-up' : 'fas fa-chevron-down'" class="text-gray-500"></i>
+        <div
+            class="bg-white rounded-xl shadow-sm border border-slate-200 mb-6 overflow-hidden transition-all duration-300">
+            <div class="px-5 py-4 flex items-center justify-between cursor-pointer bg-slate-50 border-b border-slate-100 hover:bg-slate-100 transition-colors"
+                @click="showConfig = !showConfig">
+                <h3 class="text-slate-700 font-semibold flex items-center text-sm uppercase tracking-wide">
+                    <i class="fas fa-terminal mr-2 text-indigo-500"></i>数据源配置
+                </h3>
+                <i :class="showConfig ? 'rotate-180' : ''"
+                    class="fas fa-chevron-down text-slate-400 transition-transform duration-300"></i>
             </div>
 
-            <div v-show="showConfig" class="space-y-4  mt-4">
-                <div>
-                    <label class="block text-gray-700 font-medium mb-2">API提供商</label>
-
-                    <!-- 选择框 -->
-                    <div class="mb-2">
-                        <select v-model="apiConfig.provider"
-                            class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white">
-                            <option value="alltick">AllTick (A股推荐)</option>
-                            <option value="itick">iTick (支持浏览器直连)</option>
-                        </select>
+            <div v-show="showConfig" class="p-5 space-y-5 bg-white">
+                <div class="grid md:grid-cols-2 gap-4">
+                    <div>
+                        <label
+                            class="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">数据源服务商</label>
+                        <div class="relative">
+                            <select v-model="apiConfig.provider"
+                                class="w-full pl-4 pr-10 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm text-slate-700 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none appearance-none transition-shadow">
+                                <option value="alltick">AllTick</option>
+                                <option value="itick">iTick</option>
+                            </select>
+                            <div
+                                class="absolute inset-y-0 right-0 flex items-center px-3 pointer-events-none text-slate-400">
+                                <i class="fas fa-sort"></i>
+                            </div>
+                        </div>
                     </div>
 
-                    <!-- 链接展示 -->
-                    <a :href="currentApiUrl" target="_blank"
-                        class="flex items-center gap-2 px-3 py-2 bg-blue-50 hover:bg-blue-100 rounded-lg border border-blue-200 transition-colors group">
-                        <i class="fas fa-globe text-blue-500 group-hover:text-blue-600"></i>
-                        <span class="text-blue-600 group-hover:text-blue-800 text-sm flex-1 truncate">
-                            {{ currentApiUrl }}
-                        </span>
-                        <i class="fas fa-external-link-alt text-blue-400 group-hover:text-blue-600 text-xs"></i>
-                    </a>
+                    <div>
+                        <label
+                            class="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">服务商官网</label>
+                        <a :href="currentApiUrl" target="_blank"
+                            class="flex items-center justify-between px-4 py-2.5 bg-indigo-50 hover:bg-indigo-100 border border-indigo-100 rounded-lg text-indigo-600 transition-colors group text-sm no-underline">
+                            <span class="truncate font-mono text-xs">{{ currentApiUrl }}</span>
+                            <i class="fas fa-external-link-alt ml-2 opacity-50 group-hover:opacity-100"></i>
+                        </a>
+                    </div>
+                </div>
 
-                    <p class="text-xs text-gray-500 mt-2">
-                        <i class="fas fa-info-circle mr-1"></i>点击官网注册获取免费API Key
+                <div>
+                    <label class="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">访问密钥</label>
+                    <div class="relative">
+                        <input type="text" v-model="apiConfig.apiKey"
+                            class="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm font-mono text-slate-700 placeholder-slate-400 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-shadow"
+                            placeholder="请输入你的访问密钥">
+                        <div
+                            class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none text-slate-400">
+                            <i class="fas fa-key text-xs"></i>
+                        </div>
+                    </div>
+                    <p class="text-xs text-slate-400 mt-2 flex items-center">
+                        <i class="fas fa-shield-alt mr-1"></i> 密钥仅保存在你的本地浏览器中，请放心使用。
                     </p>
                 </div>
 
-                <div>
-                    <label class="block text-gray-700 font-medium mb-2">API Key（秘钥）</label>
-                    <input type="text" v-model="apiConfig.apiKey"
-                        class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                        placeholder="请输入您的API Key">
+                <div class="pt-2 border-t border-slate-50">
+                    <button @click="saveConfig"
+                        class="w-full bg-slate-800 hover:bg-slate-900 text-white py-2.5 rounded-lg text-sm font-medium tracking-wide transition-all shadow-sm hover:shadow-md flex items-center justify-center">
+                        <i class="fas fa-save mr-2 text-slate-400"></i>保存配置
+                    </button>
+                    <p v-if="configSaved"
+                        class="text-emerald-600 text-xs text-center mt-2 flex items-center justify-center animate-fade-in-up">
+                        <i class="fas fa-check-circle mr-1"></i>配置已更新
+                    </p>
                 </div>
-
-                <button @click="saveConfig"
-                    class="w-full bg-green-600 text-white py-3 rounded-lg font-bold hover:bg-green-700 transition">
-                    <i class="fas fa-save mr-2"></i>保存到你的设备上
-                </button>
-
-                <p v-if="configSaved" class="text-green-600 text-sm text-center">
-                    <i class="fas fa-check-circle mr-1"></i>配置已保存到本地
-                </p>
             </div>
         </div>
 
         <!-- Stock Query -->
-        <div class="bg-white rounded-lg shadow-md p-5 mb-6">
-            <h3 class="text-gray-700 font-bold mb-4"><i class="fas fa-search mr-2"></i>股票数据查询</h3>
+        <div class="bg-white rounded-xl shadow-sm border border-slate-200 mb-6 p-6">
+            <h3 class="text-slate-800 font-bold mb-4 flex items-center tracking-tight">
+                <i class="fas fa-search-dollar text-indigo-500 mr-2 text-lg"></i>行情查询
+            </h3>
 
-            <div class="space-y-3">
-                <div>
-                    <label class="block text-gray-700 font-medium mb-2">市场</label>
-                    <div class="flex gap-2">
-                        <button @click="market = 'CN'"
-                            :class="market === 'CN' ? 'bg-red-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'"
-                            class="flex-1 py-2 rounded-lg font-bold transition text-sm">
-                            <i class="fas fa-flag mr-1"></i>A股
-                        </button>
-                        <button @click="market = 'HK'"
-                            :class="market === 'HK' ? 'bg-orange-500 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'"
-                            class="flex-1 py-2 rounded-lg font-bold transition text-sm">
-                            <i class="fas fa-globe-asia mr-1"></i>港股
+            <div class="space-y-4">
+                <!-- Market Toggle -->
+                <div class="flex p-1 bg-slate-100 rounded-lg">
+                    <button @click="market = 'CN'"
+                        :class="market === 'CN' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'"
+                        class="flex-1 py-2 rounded-md text-sm font-semibold transition-all duration-200">
+                        CN · A股
+                    </button>
+                    <button @click="market = 'HK'"
+                        :class="market === 'HK' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'"
+                        class="flex-1 py-2 rounded-md text-sm font-semibold transition-all duration-200">
+                        HK · 港股
+                    </button>
+                </div>
+
+                <!-- Search Input -->
+                <div class="relative group">
+                    <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                        <i
+                            class="fas fa-search text-slate-400 group-focus-within:text-indigo-500 transition-colors"></i>
+                    </div>
+                    <input type="text" v-model="stockCode"
+                        class="block w-full pl-10 pr-3 py-3 border border-slate-200 rounded-lg leading-5 bg-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm transition-shadow font-mono tracking-wide"
+                        :placeholder="market === 'HK' ? '00700 / 腾讯控股' : '600519 / 贵州茅台'" @keyup.enter="fetchStockData">
+                    <div class="absolute inset-y-0 right-0 flex items-center">
+                        <button @click="stockCode = ''" v-if="stockCode"
+                            class="text-slate-300 hover:text-slate-500 p-2 mr-1">
+                            <i class="fas fa-times-circle"></i>
                         </button>
                     </div>
                 </div>
 
-                <div>
-                    <label class="block text-gray-700 font-medium mb-2">股票代码</label>
-                    <input type="text" v-model="stockCode"
-                        class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                        :placeholder="market === 'HK' ? '输入港股代码或名称' : '输入股票代码或名称'" @keyup.enter="fetchStockData">
-                    <p class="text-xs text-gray-500 mt-1">
-                        <i class="fas fa-lightbulb mr-1"></i>
-                        <template v-if="market === 'HK'">支持输入示例：①港股代码（00700）②公司名称（腾讯控股）</template>
-                        <template v-else>支持输入示例：①6位代码（600519）②公司名称（贵州茅台）</template>
-                    </p>
-
-                    <!-- 搜索历史 -->
-                    <div v-if="searchHistory.length" class="mt-3 flex flex-wrap gap-2 items-center">
-                        <span v-for="(item, index) in searchHistory" :key="item.code + item.market"
-                            class="inline-flex items-center gap-2 px-3 py-2 bg-gray-100 hover:bg-blue-50 rounded-lg text-sm text-gray-700 cursor-pointer group transition border border-transparent hover:border-blue-200"
-                            @click="useSearchHistory(item)">
-                            <span class="text-xs font-bold px-1.5 py-0.5 rounded" 
-                                :class="item.market === 'HK' ? 'bg-orange-100 text-orange-600' : 'bg-red-100 text-red-600'">
-                                {{ item.market === 'HK' ? '港' : 'A' }}
-                            </span>
-                            <span class="group-hover:text-blue-600 font-medium">{{ item.name || item.code }}</span>
-                            <i class="fas fa-times text-gray-400 hover:text-red-500 ml-1 p-1"
-                                @click.stop="removeSearchHistory(index)"></i>
+                <!-- History Grid -->
+                <div v-if="searchHistory.length" class="mt-3">
+                    <div class="flex justify-between items-center mb-2 px-1">
+                        <span class="text-xs text-slate-400 font-medium uppercase tracking-wider flex items-center">
+                            <i class="fas fa-history mr-1.5"></i>搜索历史
                         </span>
-                        <!-- 清空按钮 -->
-                        <button @click="clearAllHistory" class="text-xs text-gray-400 hover:text-red-500 transition ml-1 py-1 px-2 rounded-md hover:bg-red-50">
+                        <button @click="clearAllHistory" class="text-xs text-slate-400 hover:text-red-500 transition-colors flex items-center">
                             <i class="fas fa-trash-alt mr-1"></i>清空
                         </button>
                     </div>
+                    <div class="grid grid-cols-2 gap-2">
+                        <div v-for="(item, index) in searchHistory" :key="item.code + item.market"
+                            class="flex items-center justify-between px-3 py-2 rounded-lg text-xs font-medium bg-slate-50 text-slate-600 border border-slate-200 hover:bg-indigo-50 hover:text-indigo-700 hover:border-indigo-200 cursor-pointer transition-colors group"
+                            @click="useSearchHistory(item)">
+                            <div class="flex items-center overflow-hidden min-w-0">
+                                <span class="mr-1.5 font-bold flex-shrink-0"
+                                    :class="item.market === 'HK' ? 'text-orange-500' : 'text-red-500'">
+                                    {{ item.market === 'HK' ? '港' : 'A' }}
+                                </span>
+                                <span class="truncate">{{ item.name || item.code }}</span>
+                            </div>
+                            <button @click.stop="removeSearchHistory(index)"
+                                class="ml-2 text-slate-300 group-hover:text-indigo-400 hover:text-red-500 focus:outline-none flex-shrink-0 transition-colors">
+                                <i class="fas fa-times"></i>
+                            </button>
+                        </div>
+                    </div>
                 </div>
 
+                <!-- Action Button -->
                 <button @click="fetchStockData" :disabled="loading || !apiConfig.apiKey"
-                    class="w-full bg-blue-600 text-white py-3 rounded-lg font-bold hover:bg-blue-700 transition disabled:bg-gray-400 disabled:cursor-not-allowed">
-                    <i :class="loading ? 'fas fa-spinner fa-spin' : 'fas fa-download'" class="mr-2"></i>
-                    {{ loading ? '获取中...' : '获取股票数据并自动填充' }}
+                    class="w-full flex items-center justify-center py-3 border border-transparent text-sm font-medium rounded-lg text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-md hover:shadow-lg mt-2">
+                    <i :class="loading ? 'fas fa-spinner fa-spin' : 'fas fa-bolt'" class="mr-2"></i>
+                    {{ loading ? '处理中...' : '获取最新行情' }}
                 </button>
 
-                <p v-if="error" class="text-red-600 text-sm bg-red-50 p-3 rounded-lg">
-                    <i class="fas fa-exclamation-circle mr-1"></i>{{ error }}
-                </p>
+                <!-- Alerts -->
+                <transition-group enter-active-class="transition duration-300 ease-out"
+                    enter-from-class="transform scale-95 opacity-0" enter-to-class="transform scale-100 opacity-100"
+                    leave-active-class="transition duration-200 ease-in"
+                    leave-from-class="transform scale-100 opacity-100" leave-to-class="transform scale-95 opacity-0">
+                    <div v-if="error" key="error" class="bg-red-50 border-l-4 border-red-500 p-4 rounded-r-md">
+                        <div class="flex">
+                            <div class="flex-shrink-0">
+                                <i class="fas fa-exclamation-circle text-red-500"></i>
+                            </div>
+                            <div class="ml-3">
+                                <p class="text-sm text-red-700">{{ error }}</p>
+                            </div>
+                        </div>
+                    </div>
 
-                <p v-if="!apiConfig.apiKey && !showConfig" class="text-yellow-600 text-sm bg-yellow-50 p-3 rounded-lg">
-                    <i class="fas fa-info-circle mr-1"></i>请先在上方配置API Key
-                </p>
-
-                <p v-if="dataFetched" class="text-green-600 text-sm bg-green-50 p-3 rounded-lg">
-                    <i class="fas fa-check-circle mr-1"></i>数据已自动填充，可直接计算均线
-                </p>
+                    <div v-if="!apiConfig.apiKey && !showConfig" key="warning"
+                        class="bg-amber-50 border-l-4 border-amber-400 p-4 rounded-r-md cursor-pointer hover:bg-amber-100 transition-colors"
+                        @click="showConfig = true">
+                        <div class="flex">
+                            <div class="flex-shrink-0">
+                                <i class="fas fa-key text-amber-400"></i>
+                            </div>
+                            <div class="ml-3">
+                                <p class="text-sm text-amber-700 font-medium">缺少访问密钥</p>
+                                <p class="text-xs text-amber-600 mt-1">请打开数据源配置填写访问密钥以继续。</p>
+                            </div>
+                        </div>
+                    </div>
+                </transition-group>
             </div>
         </div>
 
         <!-- Stock Info -->
-        <div v-if="stockInfo.code" class="bg-white rounded-lg shadow-md p-5 mb-6">
-            <div class="flex items-center justify-between mb-4">
-                <h3 class="text-gray-700 font-bold"><i class="fas fa-chart-line mr-2"></i>当日行情</h3>
-                <span class="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded">{{ stockInfo.code }}</span>
+        <transition enter-active-class="transition duration-500 ease-out"
+            enter-from-class="transform translate-y-4 opacity-0" enter-to-class="transform translate-y-0 opacity-100">
+            <div v-if="stockInfo.code"
+                class="bg-white rounded-xl shadow-sm border border-slate-200 mb-6 overflow-hidden">
+                <!-- Header -->
+                <div class="bg-slate-50 px-6 py-4 border-b border-slate-100 flex justify-between items-center">
+                    <div>
+                        <h2 class="text-xl font-bold text-slate-800 tracking-tight">{{ stockInfo.name || '未知股票' }}</h2>
+                        <span class="text-xs font-mono text-slate-500 bg-slate-200 px-2 py-0.5 rounded">{{
+                            stockInfo.code }}</span>
+                    </div>
+                    <div class="text-right">
+                        <span class="block text-2xl font-bold tracking-tight font-mono"
+                            :class="stockInfo.close > stockInfo.open ? 'text-red-500' : (stockInfo.close < stockInfo.open ? 'text-green-500' : 'text-slate-700')">
+                            {{ stockInfo.close.toFixed(2) }}
+                        </span>
+                        <span class="text-xs text-slate-400 uppercase tracking-wider font-semibold">当前价格</span>
+                    </div>
+                </div>
+
+                <!-- Grid Stats -->
+                <div class="grid grid-cols-3 divide-x divide-slate-100 border-b border-slate-100">
+                    <div class="p-4 text-center hover:bg-slate-50 transition-colors">
+                        <span class="block text-xs text-slate-400 uppercase tracking-wider font-semibold mb-1">今开</span>
+                        <span class="block text-lg font-mono font-medium text-slate-700">{{ stockInfo.open.toFixed(2)
+                            }}</span>
+                    </div>
+                    <div class="p-4 text-center hover:bg-slate-50 transition-colors">
+                        <span class="block text-xs text-slate-400 uppercase tracking-wider font-semibold mb-1">最高</span>
+                        <span class="block text-lg font-mono font-medium text-red-500">{{ stockInfo.high.toFixed(2)
+                            }}</span>
+                    </div>
+                    <div class="p-4 text-center hover:bg-slate-50 transition-colors">
+                        <span class="block text-xs text-slate-400 uppercase tracking-wider font-semibold mb-1">最低</span>
+                        <span class="block text-lg font-mono font-medium text-green-500">{{ stockInfo.low.toFixed(2)
+                            }}</span>
+                    </div>
+                </div>
             </div>
-            <div class="mb-4 pb-3 border-b border-gray-200">
-                <p class="text-2xl font-bold text-gray-900">{{ stockInfo.name || '未知名称' }}</p>
-                <p class="text-sm text-gray-500">{{ stockInfo.code }}</p>
+        </transition>
+
+        <!-- A0 Input Section -->
+        <div
+            class="bg-gradient-to-br from-white to-slate-50 rounded-xl shadow-sm border border-slate-200 mb-8 p-6 relative overflow-hidden">
+            <div class="absolute top-0 right-0 p-4 opacity-5 pointer-events-none">
+                <i class="fas fa-chart-line text-8xl"></i>
             </div>
-            <div class="grid grid-cols-2 gap-4">
-                <div>
-                    <p class="text-xs text-gray-500">最高价</p>
-                    <p class="text-lg font-semibold text-red-600" :class="{ 'animate-pulse': loading }">
-                        {{ loading ? '...' : stockInfo.high.toFixed(2) }}
-                    </p>
-                </div>
-                <div>
-                    <p class="text-xs text-gray-500">最低价</p>
-                    <p class="text-lg font-semibold text-green-600" :class="{ 'animate-pulse': loading }">
-                        {{ loading ? '...' : stockInfo.low.toFixed(2) }}
-                    </p>
-                </div>
-                <div>
-                    <p class="text-xs text-gray-500">开盘价</p>
-                    <p class="text-lg font-semibold text-gray-800" :class="{ 'animate-pulse': loading }">
-                        {{ loading ? '...' : stockInfo.open.toFixed(2) }}
-                    </p>
-                </div>
-                <div>
-                    <p class="text-xs text-gray-500">当前价</p>
-                    <p class="text-lg font-semibold text-blue-600" :class="{ 'animate-pulse': loading }">
-                        {{ loading ? '...' : stockInfo.close.toFixed(2) }}
-                    </p>
+
+            <label class="block text-sm font-bold text-slate-700 mb-3 tracking-wide uppercase flex items-center">
+                <span
+                    class="bg-indigo-600 text-white w-6 h-6 rounded-full flex items-center justify-center text-xs mr-2">1</span>
+                输入 A0 (下个交易日盘中价)
+            </label>
+
+            <div class="relative group">
+                <input type="number" v-model.number="a0" step="0.01"
+                    class="block w-full px-4 py-4 text-xl font-mono text-center text-indigo-700 bg-white border-2 border-indigo-100 rounded-xl shadow-sm focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all placeholder-indigo-200"
+                    placeholder="0.00" @change="calculateAll">
+                <div class="absolute inset-y-0 right-0 pr-4 flex items-center pointer-events-none">
+                    <span class="text-slate-400 font-medium">CNY/HKD</span>
                 </div>
             </div>
 
-
+            <!-- Dynamic Result Preview -->
+            <transition name="fade">
+                <div v-if="a0" class="mt-6 grid grid-cols-3 gap-3">
+                    <div
+                        class="bg-white rounded-lg p-2 md:p-3 border border-slate-100 shadow-sm text-center transform transition hover:-translate-y-1 hover:shadow-md">
+                        <p class="text-[10px] text-slate-400 font-bold uppercase tracking-wider mb-1">MA5</p>
+                        <p class="font-mono text-sm md:text-lg font-bold text-blue-600 truncate">{{ ma5.result.toFixed(3) }}</p>
+                    </div>
+                    <div
+                        class="bg-white rounded-lg p-2 md:p-3 border border-slate-100 shadow-sm text-center transform transition hover:-translate-y-1 hover:shadow-md">
+                        <p class="text-[10px] text-slate-400 font-bold uppercase tracking-wider mb-1">MA10</p>
+                        <p class="font-mono text-sm md:text-lg font-bold text-amber-500 truncate">{{ ma10.result.toFixed(3) }}</p>
+                    </div>
+                    <div
+                        class="bg-white rounded-lg p-2 md:p-3 border border-slate-100 shadow-sm text-center transform transition hover:-translate-y-1 hover:shadow-md">
+                        <p class="text-[10px] text-slate-400 font-bold uppercase tracking-wider mb-1">MA20</p>
+                        <p class="font-mono text-sm md:text-lg font-bold text-purple-600 truncate">{{ ma20.result.toFixed(3) }}</p>
+                    </div>
+                </div>
+            </transition>
         </div>
 
-        <!-- Global A0 -->
-        <div class="bg-white rounded-lg shadow-md p-5 mb-6">
-            <label class="block text-gray-700 font-medium mb-2">A0（明日盘中实时价格）</label>
-            <input type="number" v-model.number="a0" step="0.01"
-                class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                placeholder="输入明日盘中实时价格" @change="calculateAll">
-            <div v-if="a0" class="mt-3 grid grid-cols-3 gap-2 text-center">
-                <div class="bg-blue-50 rounded-lg p-2">
-                    <p class="text-xs text-gray-500">MA5_0</p>
-                    <p class="font-bold text-blue-600">{{ ma5.result.toFixed(3) }}</p>
+        <!-- Calculation Cards Grid -->
+        <div class="space-y-4">
+            <!-- MA5 Card -->
+            <div
+                class="bg-white rounded-xl shadow-sm border-l-4 border-blue-500 overflow-hidden transition-all duration-300 hover:shadow-md">
+                <div class="px-5 py-4 flex items-center justify-between cursor-pointer bg-slate-50 border-b border-slate-100"
+                    @click="showMA5 = !showMA5">
+                    <div class="flex items-center">
+                        <div
+                            class="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center mr-3 text-blue-600 font-bold text-xs shadow-sm">
+                            5</div>
+                        <h3 class="font-bold text-slate-700 tracking-tight">MA5 <span
+                                class="font-normal text-slate-400 text-sm ml-1">周线趋势</span></h3>
+                    </div>
+                    <i :class="showMA5 ? 'rotate-180' : ''"
+                        class="fas fa-chevron-down text-slate-300 transition-transform duration-300"></i>
                 </div>
-                <div class="bg-green-50 rounded-lg p-2">
-                    <p class="text-xs text-gray-500">MA10_0</p>
-                    <p class="font-bold text-green-600">{{ ma10.result.toFixed(3) }}</p>
+
+                <div v-show="showMA5" class="p-5 bg-white">
+                    <div class="grid grid-cols-2 gap-4 mb-4">
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-400 uppercase mb-1">A5 (前5日收盘价)</label>
+                            <input type="number" v-model.number="ma5.a5" step="0.01"
+                                class="w-full bg-slate-50 border border-slate-200 rounded px-3 py-2 font-mono text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-shadow"
+                                :class="{ 'bg-blue-50/50': loading }">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-400 uppercase mb-1">MA5_1
+                                (今日五日线)</label>
+                            <input type="number" v-model.number="ma5.ma5_1" step="0.001"
+                                class="w-full bg-slate-50 border border-slate-200 rounded px-3 py-2 font-mono text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-shadow"
+                                :class="{ 'bg-blue-50/50': loading }">
+                        </div>
+                    </div>
+                    <button @click="calculateMA5"
+                        class="w-full py-2 bg-blue-50 hover:bg-blue-100 text-blue-700 font-medium rounded-lg transition-colors text-sm mb-4">
+                        计算 MA5
+                    </button>
+                    <div class="flex items-center justify-between p-3 bg-blue-50 rounded-lg border border-blue-100">
+                        <span class="text-xs font-bold text-blue-400 uppercase tracking-wider">计算结果</span>
+                        <span class="font-mono text-xl font-bold text-blue-700">{{ ma5.result.toFixed(3) }}</span>
+                    </div>
                 </div>
-                <div class="bg-purple-50 rounded-lg p-2">
-                    <p class="text-xs text-gray-500">MA20_0</p>
-                    <p class="font-bold text-purple-600">{{ ma20.result.toFixed(3) }}</p>
+            </div>
+
+            <!-- MA10 Card -->
+            <div
+                class="bg-white rounded-xl shadow-sm border-l-4 border-amber-400 overflow-hidden transition-all duration-300 hover:shadow-md">
+                <div class="px-5 py-4 flex items-center justify-between cursor-pointer bg-slate-50 border-b border-slate-100"
+                    @click="showMA10 = !showMA10">
+                    <div class="flex items-center">
+                        <div
+                            class="w-8 h-8 rounded-full bg-amber-100 flex items-center justify-center mr-3 text-amber-600 font-bold text-xs shadow-sm">
+                            10</div>
+                        <h3 class="font-bold text-slate-700 tracking-tight">MA10 <span
+                                class="font-normal text-slate-400 text-sm ml-1">半月线</span></h3>
+                    </div>
+                    <i :class="showMA10 ? 'rotate-180' : ''"
+                        class="fas fa-chevron-down text-slate-300 transition-transform duration-300"></i>
+                </div>
+
+                <div v-show="showMA10" class="p-5 bg-white">
+                    <div class="grid grid-cols-2 gap-4 mb-4">
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-400 uppercase mb-1">A10
+                                (前10日收盘价)</label>
+                            <input type="number" v-model.number="ma10.a10" step="0.01"
+                                class="w-full bg-slate-50 border border-slate-200 rounded px-3 py-2 font-mono text-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none transition-shadow"
+                                :class="{ 'bg-amber-50/50': loading }">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-400 uppercase mb-1">MA10_1
+                                (今日十日线)</label>
+                            <input type="number" v-model.number="ma10.ma10_1" step="0.001"
+                                class="w-full bg-slate-50 border border-slate-200 rounded px-3 py-2 font-mono text-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none transition-shadow"
+                                :class="{ 'bg-amber-50/50': loading }">
+                        </div>
+                    </div>
+                    <button @click="calculateMA10"
+                        class="w-full py-2 bg-amber-50 hover:bg-amber-100 text-amber-700 font-medium rounded-lg transition-colors text-sm mb-4">
+                        计算 MA10
+                    </button>
+                    <div class="flex items-center justify-between p-3 bg-amber-50 rounded-lg border border-amber-100">
+                        <span class="text-xs font-bold text-amber-400 uppercase tracking-wider">计算结果</span>
+                        <span class="font-mono text-xl font-bold text-amber-700">{{ ma10.result.toFixed(3) }}</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- MA20 Card -->
+            <div
+                class="bg-white rounded-xl shadow-sm border-l-4 border-purple-500 overflow-hidden transition-all duration-300 hover:shadow-md">
+                <div class="px-5 py-4 flex items-center justify-between cursor-pointer bg-slate-50 border-b border-slate-100"
+                    @click="showMA20 = !showMA20">
+                    <div class="flex items-center">
+                        <div
+                            class="w-8 h-8 rounded-full bg-purple-100 flex items-center justify-center mr-3 text-purple-600 font-bold text-xs shadow-sm">
+                            20</div>
+                        <h3 class="font-bold text-slate-700 tracking-tight">MA20 <span
+                                class="font-normal text-slate-400 text-sm ml-1">月线趋势</span></h3>
+                    </div>
+                    <i :class="showMA20 ? 'rotate-180' : ''"
+                        class="fas fa-chevron-down text-slate-300 transition-transform duration-300"></i>
+                </div>
+
+                <div v-show="showMA20" class="p-5 bg-white">
+                    <div class="grid grid-cols-2 gap-4 mb-4">
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-400 uppercase mb-1">A20
+                                (前20日收盘价)</label>
+                            <input type="number" v-model.number="ma20.a20" step="0.01"
+                                class="w-full bg-slate-50 border border-slate-200 rounded px-3 py-2 font-mono text-sm focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none transition-shadow"
+                                :class="{ 'bg-purple-50/50': loading }">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-400 uppercase mb-1">MA20_1
+                                (今日二十日线)</label>
+                            <input type="number" v-model.number="ma20.ma20_1" step="0.001"
+                                class="w-full bg-slate-50 border border-slate-200 rounded px-3 py-2 font-mono text-sm focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none transition-shadow"
+                                :class="{ 'bg-purple-50/50': loading }">
+                        </div>
+                    </div>
+                    <button @click="calculateMA20"
+                        class="w-full py-2 bg-purple-50 hover:bg-purple-100 text-purple-700 font-medium rounded-lg transition-colors text-sm mb-4">
+                        计算 MA20
+                    </button>
+                    <div class="flex items-center justify-between p-3 bg-purple-50 rounded-lg border border-purple-100">
+                        <span class="text-xs font-bold text-purple-400 uppercase tracking-wider">计算结果</span>
+                        <span class="font-mono text-xl font-bold text-purple-700">{{ ma20.result.toFixed(3) }}</span>
+                    </div>
                 </div>
             </div>
         </div>
 
-        <!-- MA5 -->
-        <div class="bg-white rounded-lg shadow-md p-5 mb-6">
-            <div class="flex items-center justify-between cursor-pointer" @click="showMA5 = !showMA5">
-                <h3 class="text-blue-600 font-bold"><i class="fas fa-calculator mr-2"></i>明日五日均线计算</h3>
-                <i :class="showMA5 ? 'fas fa-chevron-up' : 'fas fa-chevron-down'" class="text-gray-400"></i>
-            </div>
-            
-            <div v-show="showMA5" class="mt-4">
-                <label class="block text-gray-700 font-medium mb-2">A5（前 5 日价格）</label>
-                <input type="number" v-model.number="ma5.a5" step="0.01"
-                    class="w-full px-4 py-3 border border-gray-300 rounded-lg mb-3 transition-all" 
-                    :class="{ 'bg-blue-50 border-blue-200': loading }"
-                    placeholder="输入前5日价格">
-                <label class="block text-gray-700 font-medium mb-2">MA5_1（当日 MA5）</label>
-                <input type="number" v-model.number="ma5.ma5_1" step="0.001"
-                    class="w-full px-4 py-3 border border-gray-300 rounded-lg mb-3 transition-all"
-                    :class="{ 'bg-blue-50 border-blue-200': loading }"
-                    placeholder="输入当日MA5">
-                <button @click="calculateMA5"
-                    class="w-full bg-blue-600 text-white py-3 rounded-lg font-bold hover:bg-blue-700 transition">计算 5
-                    日均线</button>
-                <div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-600 rounded">
-                    <p class="font-bold text-blue-800">MA5_0 = {{ ma5.result.toFixed(3) }}</p>
-                </div>
-            </div>
-        </div>
+        <footer class="mt-12 text-center pb-8">
+            <p class="text-xs text-slate-300 font-medium tracking-widest uppercase">© 2026 实时均线计算器 · 专业版</p>
+        </footer>
 
-        <!-- MA10 -->
-        <div class="bg-white rounded-lg shadow-md p-5 mb-6">
-            <div class="flex items-center justify-between cursor-pointer" @click="showMA10 = !showMA10">
-                <h3 class="text-green-600 font-bold"><i class="fas fa-calculator mr-2"></i>明日十日均线计算</h3>
-                <i :class="showMA10 ? 'fas fa-chevron-up' : 'fas fa-chevron-down'" class="text-gray-400"></i>
-            </div>
-
-            <div v-show="showMA10" class="mt-4">
-                <label class="block text-gray-700 font-medium mb-2">A10（前 10 日价格）</label>
-                <input type="number" v-model.number="ma10.a10" step="0.01"
-                    class="w-full px-4 py-3 border border-gray-300 rounded-lg mb-3 transition-all"
-                    :class="{ 'bg-green-50 border-green-200': loading }"
-                    placeholder="输入前10日价格">
-                <label class="block text-gray-700 font-medium mb-2">MA10_1（当日 MA10）</label>
-                <input type="number" v-model.number="ma10.ma10_1" step="0.001"
-                    class="w-full px-4 py-3 border border-gray-300 rounded-lg mb-3 transition-all"
-                    :class="{ 'bg-green-50 border-green-200': loading }"
-                    placeholder="输入当日MA10">
-                <button @click="calculateMA10"
-                    class="w-full bg-green-600 text-white py-3 rounded-lg font-bold hover:bg-green-700 transition">计算 10
-                    日均线</button>
-                <div class="mt-4 p-3 bg-green-50 border-l-4 border-green-600 rounded">
-                    <p class="font-bold text-green-800">MA10_0 = {{ ma10.result.toFixed(3) }}</p>
-                </div>
-            </div>
-        </div>
-
-        <!-- MA20 -->
-        <div class="bg-white rounded-lg shadow-md p-5 mb-6">
-            <div class="flex items-center justify-between cursor-pointer" @click="showMA20 = !showMA20">
-                <h3 class="text-purple-600 font-bold"><i class="fas fa-calculator mr-2"></i>明日二十日均线计算</h3>
-                <i :class="showMA20 ? 'fas fa-chevron-up' : 'fas fa-chevron-down'" class="text-gray-400"></i>
-            </div>
-
-            <div v-show="showMA20" class="mt-4">
-                <label class="block text-gray-700 font-medium mb-2">A20（前 20 日价格）</label>
-                <input type="number" v-model.number="ma20.a20" step="0.01"
-                    class="w-full px-4 py-3 border border-gray-300 rounded-lg mb-3 transition-all"
-                    :class="{ 'bg-purple-50 border-purple-200': loading }"
-                    placeholder="输入前20日价格">
-                <label class="block text-gray-700 font-medium mb-2">MA20_1（当日 MA20）</label>
-                <input type="number" v-model.number="ma20.ma20_1" step="0.001"
-                    class="w-full px-4 py-3 border border-gray-300 rounded-lg mb-3 transition-all"
-                    :class="{ 'bg-purple-50 border-purple-200': loading }"
-                    placeholder="输入当日MA20">
-                <button @click="calculateMA20"
-                    class="w-full bg-purple-600 text-white py-3 rounded-lg font-bold hover:bg-purple-700 transition">计算 20
-                    日均线</button>
-                <div class="mt-4 p-3 bg-purple-50 border-l-4 border-purple-600 rounded">
-                    <p class="font-bold text-purple-800">MA20_0 = {{ ma20.result.toFixed(3) }}</p>
-                </div>
-            </div>
-        </div>
-
-        <p class="text-center text-gray-400 text-sm mt-8">© 实时均线计算器</p>
-    </div>
-
-    <script src="js/app.js"></script>
+        <script src="js/app.js"></script>
 </body>
 
 </html>
