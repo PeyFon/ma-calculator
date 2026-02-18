@@ -86,6 +86,11 @@ window.MACalc = window.MACalc || {};
             const dataFetched = ref(false);
             const searchHistory = ref([]);
 
+            // 模块折叠状态
+            const showMA5 = ref(false);
+            const showMA10 = ref(false);
+            const showMA20 = ref(false);
+
             const apiConfig = reactive({
                 provider: "alltick",
                 apiKey: ""
@@ -263,6 +268,7 @@ window.MACalc = window.MACalc || {};
             return {
                 a0, ma5, ma10, ma20, stockInfo, showConfig, stockCode, market,
                 loading, error, configSaved, dataFetched, searchHistory, apiConfig,
+                showMA5, showMA10, showMA20,
                 currentApiUrl, calculateMA5, calculateMA10, calculateMA20, calculateAll, saveConfig,
                 fetchStockData, removeSearchHistory, useSearchHistory, clearAllHistory
             };
