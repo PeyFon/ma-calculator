@@ -5,6 +5,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>实时均线计算器</title>
+    <!-- 方案 B: 消除 favicon.ico 404 报错 -->
+    <link rel="icon" href="data:;base64,iVBORw0KGgo=">
     <!-- Tailwind CSS Latest CDN with Fallback logic -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
@@ -21,15 +23,15 @@
     
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css" rel="stylesheet">
     
-    <!-- Vue 3 with Fallback -->
-    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <!-- Vue 3 with Fallback (方案 C: 使用生产版本 .prod.js) -->
+    <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
     <script>
         if (!window.Vue) {
             document.write('<script src="https://cdnjs.cloudflare.com/ajax/libs/vue/3.4.21/vue.global.prod.js"><\/script>');
         }
     </script>
     <script src="js/api-adapters.js"></script>
-    <script src="key.js"></script>
+    <!-- 方案 A: 已删除 key.js 引用，消除 404 报错 -->
 </head>
 
 <body class="bg-gray-100 py-6 px-4">
