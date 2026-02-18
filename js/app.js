@@ -11,7 +11,7 @@ function decodeUnicode(str) {
 }
 
 // 通过腾讯财经接口查询股票代码（支持中文名称搜索）
-async function searchStockCodeByName(name) {
+async function searchStockCodeByName(name, market) {
   // 腾讯财经搜索接口（通过CORS代理）
   const targetUrl = `https://smartbox.gtimg.cn/s3/?q=${encodeURIComponent(name)}&t=all`;
   const searchUrl = `${CORS_PROXY}${encodeURIComponent(targetUrl)}`;
@@ -20,30 +20,34 @@ async function searchStockCodeByName(name) {
     const response = await fetch(searchUrl);
     const text = await response.text();
 
-    // 解析返回数据，格式类似: v_hint="qid..."
+    // 解析返回数据，格式: v_hint="entry1^entry2^..."
     const match = text.match(/v_hint="([^"]+)"/);
     if (!match) return null;
 
-    const data = match[1];
-    // 数据格式: sz^000422^名称^... 或 sz~000422~名称~
-    // 可能是 ^ 或 ~ 分隔
-    const delimiter = data.includes("^") ? "^" : "~";
-    const parts = data.split(delimiter);
+    // 条目以 ^ 分隔，每条格式: 市场~代码~名称~拼音~类型
+    const entries = match[1].split('^');
 
-    if (parts.length >= 3) {
-      const prefix = parts[0]; // 如 sz
-      const codeNum = parts[1]; // 000422
-      const stockName = decodeUnicode(parts[2]); // 解码Unicode
+    for (const entry of entries) {
+      if (!entry.trim()) continue;
+      const parts = entry.split('~');
 
-      const fullCode = prefix + codeNum;
+      if (parts.length >= 5) {
+        const prefix = parts[0];    // sh, sz, hk, us
+        const codeNum = parts[1];   // 00700, 600519
+        const stockName = decodeUnicode(parts[2]);
+        const stockType = parts[4]; // GP=股票, ZS=指数, QZ=权证
 
-      // 验证是A股（6位数字）
-      if (/^\d{6}$/.test(codeNum)) {
-        return {
-          code: codeNum,
-          name: stockName,
-          fullCode: fullCode
-        };
+        if (market === 'HK') {
+          // 港股：前缀 hk，类型 GP，代码纯数字（通常4-5位）
+          if (prefix === 'hk' && stockType === 'GP' && /^\d{4,5}$/.test(codeNum)) {
+            return { code: codeNum, name: stockName, fullCode: prefix + codeNum };
+          }
+        } else {
+          // A股：前缀 sh/sz，代码6位数字
+          if ((prefix === 'sh' || prefix === 'sz') && /^\d{6}$/.test(codeNum)) {
+            return { code: codeNum, name: stockName, fullCode: prefix + codeNum };
+          }
+        }
       }
     }
     return null;
@@ -74,10 +78,50 @@ createApp({
     // API integration state
     const showConfig = ref(false);
     const stockCode = ref("");
+    const market = ref("CN");  // CN=A股, HK=港股
     const loading = ref(false);
     const error = ref("");
     const configSaved = ref(false);
     const dataFetched = ref(false);
+
+    // 搜索历史（最近5条，持久化到localStorage）
+    const searchHistory = ref([]);
+
+    const loadSearchHistory = () => {
+      try {
+        const saved = localStorage.getItem('ma-calculator-search-history');
+        if (saved) searchHistory.value = JSON.parse(saved);
+      } catch (e) {
+        searchHistory.value = [];
+      }
+    };
+
+    const saveSearchHistory = () => {
+      localStorage.setItem('ma-calculator-search-history', JSON.stringify(searchHistory.value));
+    };
+
+    const addSearchHistory = (code, name, historyMarket) => {
+      // 去重（同代码同市场视为重复）
+      searchHistory.value = searchHistory.value.filter(
+        item => !(item.code === code && item.market === historyMarket)
+      );
+      // 头部插入
+      searchHistory.value.unshift({ code, name, market: historyMarket, time: Date.now() });
+      // 保留最近5条
+      if (searchHistory.value.length > 5) searchHistory.value = searchHistory.value.slice(0, 5);
+      saveSearchHistory();
+    };
+
+    const removeSearchHistory = (index) => {
+      searchHistory.value.splice(index, 1);
+      saveSearchHistory();
+    };
+
+    const useSearchHistory = (item) => {
+      market.value = item.market;
+      stockCode.value = item.code;
+      fetchStockData();
+    };
 
     const apiConfig = reactive({
       provider: "alltick", // 默认 AllTick
@@ -180,15 +224,16 @@ createApp({
       // 获取输入内容
       let actualCode = stockCode.value.trim();
       let searchedName = "";
+      const currentMarket = market.value;
 
       // 检查是否是中文名称（包含中文）
       if (/[\u4e00-\u9fa5]/.test(actualCode)) {
         // 通过腾讯接口搜索股票代码
         error.value = "正在搜索股票...";
-        const searchResult = await searchStockCodeByName(actualCode);
+        const searchResult = await searchStockCodeByName(actualCode, currentMarket);
 
         if (!searchResult) {
-          error.value = `未找到"${actualCode}"对应的股票，请输入准确的公司名称或6位股票代码`;
+          error.value = `未找到"${actualCode}"对应的${currentMarket === 'HK' ? '港股' : 'A股'}，请输入准确的公司名称或股票代码`;
           return;
         }
 
@@ -196,10 +241,19 @@ createApp({
         searchedName = searchResult.name;
       }
 
-      // 验证股票代码格式（6位数字）
-      if (!/^\d{6}$/.test(actualCode)) {
-        error.value = "股票代码必须是6位数字";
-        return;
+      // 验证股票代码格式
+      if (currentMarket === 'HK') {
+        // 港股代码：4-5位数字
+        if (!/^\d{4,5}$/.test(actualCode)) {
+          error.value = "港股代码必须是4-5位数字（如 00700）";
+          return;
+        }
+      } else {
+        // A股代码：6位数字
+        if (!/^\d{6}$/.test(actualCode)) {
+          error.value = "A股代码必须是6位数字";
+          return;
+        }
       }
 
       loading.value = true;
@@ -214,14 +268,15 @@ createApp({
         try {
           stockName = await adapter.fetchStockName(
             actualCode,
-            apiConfig.apiKey
+            apiConfig.apiKey,
+            currentMarket
           );
         } catch (e) {
           // 忽略名称查询错误
         }
 
         // 再查K线数据
-        const data = await adapter.fetchStockData(actualCode, apiConfig.apiKey);
+        const data = await adapter.fetchStockData(actualCode, apiConfig.apiKey, currentMarket);
 
         // Auto-fill all fields
         a0.value = data.current;
@@ -244,6 +299,9 @@ createApp({
         calculateMA5();
         calculateMA10();
         calculateMA20();
+
+        // 记录搜索历史
+        addSearchHistory(actualCode, stockInfo.name || actualCode, currentMarket);
 
         dataFetched.value = true;
       } catch (e) {
@@ -270,6 +328,7 @@ createApp({
     // Load saved config on mount
     onMounted(() => {
       loadApiConfig();
+      loadSearchHistory();
     });
 
     return {
@@ -282,6 +341,7 @@ createApp({
       calculateMA20,
       showConfig,
       stockCode,
+      market,
       loading,
       error,
       configSaved,
@@ -290,7 +350,10 @@ createApp({
       saveConfig,
       fetchStockData,
       stockInfo,
-      currentApiUrl
+      currentApiUrl,
+      searchHistory,
+      removeSearchHistory,
+      useSearchHistory
     };
   }
 }).mount("#app");

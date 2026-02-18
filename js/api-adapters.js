@@ -20,13 +20,21 @@ async function fetchWithTimeout(url, options = {}, timeout = 15000) {
 }
 
 class BaseAdapter {
-    async fetchStockData(code, apiKey, apiUrl) {
+    async fetchStockData(code, apiKey, market) {
         throw new Error('fetchStockData must be implemented');
     }
     
-    // Helper: Determine exchange (SH/SZ)
-    getExchange(code) {
+    // Helper: Determine exchange based on market
+    // A股: SH/SZ (by code prefix), 港股: HK
+    getExchange(code, market) {
+        if (market === 'HK') return 'HK';
         return code.startsWith('6') ? 'SH' : 'SZ';
+    }
+
+    // Helper: Strip leading zeros from HK stock codes
+    // 港股代码去前导零: 00700 -> 700, 01810 -> 1810
+    normalizeHKCode(code) {
+        return code.replace(/^0+/, '') || '0';
     }
     
     // Helper: Calculate MA from price array
@@ -43,9 +51,10 @@ class AllTickAdapter extends BaseAdapter {
     static CORS_PROXY = 'https://corsproxy.io/?';
 
     // 获取股票名称（先查这个，失败不影响K线查询）
-    async fetchStockName(code, apiKey) {
-        const exchange = this.getExchange(code);
-        const fullCode = `${code}.${exchange}`;
+    async fetchStockName(code, apiKey, market) {
+        const exchange = this.getExchange(code, market);
+        const apiCode = market === 'HK' ? this.normalizeHKCode(code) : code;
+        const fullCode = `${apiCode}.${exchange}`;
         
         const apiUrl = `https://quote.alltick.co/quote-stock-b-api/static_info`;
         
@@ -76,9 +85,10 @@ class AllTickAdapter extends BaseAdapter {
         }
     }
 
-    async fetchStockData(code, apiKey) {
-        const exchange = this.getExchange(code);
-        const fullCode = `${code}.${exchange}`;
+    async fetchStockData(code, apiKey, market) {
+        const exchange = this.getExchange(code, market);
+        const apiCode = market === 'HK' ? this.normalizeHKCode(code) : code;
+        const fullCode = `${apiCode}.${exchange}`;
 
         // 官方文档地址: https://quote.alltick.co/quote-stock-b-api/kline
         const apiUrl = `https://quote.alltick.co/quote-stock-b-api/kline`;
@@ -165,11 +175,12 @@ class AllTickAdapter extends BaseAdapter {
 // iTick API Adapter (支持CORS，浏览器可直接调用)
 class ITickAdapter extends BaseAdapter {
     // 获取股票名称（先查这个，失败不影响K线查询）
-    async fetchStockName(code, apiKey) {
-        const exchange = this.getExchange(code);
+    async fetchStockName(code, apiKey, market) {
+        const exchange = this.getExchange(code, market);
         const region = exchange;
+        const apiCode = market === 'HK' ? this.normalizeHKCode(code) : code;
         
-        const url = `https://api.itick.org/stock/info?type=stock&region=${region}&code=${code}`;
+        const url = `https://api.itick.org/stock/info?type=stock&region=${region}&code=${apiCode}`;
         
         try {
             const response = await fetchWithTimeout(url, {
@@ -187,12 +198,13 @@ class ITickAdapter extends BaseAdapter {
         }
     }
 
-    async fetchStockData(code, apiKey) {
-        const exchange = this.getExchange(code);
+    async fetchStockData(code, apiKey, market) {
+        const exchange = this.getExchange(code, market);
         const region = exchange;
+        const apiCode = market === 'HK' ? this.normalizeHKCode(code) : code;
         
         // iTick API 直接调用（支持CORS）
-        const url = `https://api.itick.org/stock/kline?region=${region}&code=${code}&kType=8&limit=25`;
+        const url = `https://api.itick.org/stock/kline?region=${region}&code=${apiCode}&kType=8&limit=25`;
         
         let response;
         try {

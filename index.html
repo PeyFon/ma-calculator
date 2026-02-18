@@ -97,13 +97,43 @@
 
             <div class="space-y-3">
                 <div>
+                    <label class="block text-gray-700 font-medium mb-2">市场</label>
+                    <div class="flex gap-2">
+                        <button @click="market = 'CN'"
+                            :class="market === 'CN' ? 'bg-red-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'"
+                            class="flex-1 py-2 rounded-lg font-bold transition text-sm">
+                            <i class="fas fa-flag mr-1"></i>A股
+                        </button>
+                        <button @click="market = 'HK'"
+                            :class="market === 'HK' ? 'bg-orange-500 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'"
+                            class="flex-1 py-2 rounded-lg font-bold transition text-sm">
+                            <i class="fas fa-globe-asia mr-1"></i>港股
+                        </button>
+                    </div>
+                </div>
+
+                <div>
                     <label class="block text-gray-700 font-medium mb-2">股票代码</label>
                     <input type="text" v-model="stockCode"
                         class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                        placeholder="输入股票代码或名称" @keyup.enter="fetchStockData">
+                        :placeholder="market === 'HK' ? '输入港股代码或名称' : '输入股票代码或名称'" @keyup.enter="fetchStockData">
                     <p class="text-xs text-gray-500 mt-1">
-                        <i class="fas fa-lightbulb mr-1"></i>支持输入示例：①6位代码（600519）②公司名称（贵州茅台）
+                        <i class="fas fa-lightbulb mr-1"></i>
+                        <template v-if="market === 'HK'">支持输入示例：①港股代码（00700）②公司名称（腾讯控股）</template>
+                        <template v-else>支持输入示例：①6位代码（600519）②公司名称（贵州茅台）</template>
                     </p>
+
+                    <!-- 搜索历史 -->
+                    <div v-if="searchHistory.length" class="mt-2 flex flex-wrap gap-1.5">
+                        <span v-for="(item, index) in searchHistory" :key="item.code + item.market"
+                            class="inline-flex items-center gap-1 px-2 py-1 bg-gray-100 hover:bg-blue-50 rounded text-xs text-gray-600 cursor-pointer group transition"
+                            @click="useSearchHistory(item)">
+                            <span class="text-gray-400">{{ item.market === 'HK' ? '港' : 'A' }}</span>
+                            <span class="group-hover:text-blue-600">{{ item.name || item.code }}</span>
+                            <i class="fas fa-times text-gray-300 hover:text-red-500 ml-0.5"
+                                @click.stop="removeSearchHistory(index)"></i>
+                        </span>
+                    </div>
                 </div>
 
                 <button @click="fetchStockData" :disabled="loading || !apiConfig.apiKey"
@@ -164,6 +194,20 @@
             <input type="number" v-model.number="a0" step="0.01"
                 class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                 placeholder="输入明日盘中实时价格">
+            <div v-if="a0" class="mt-3 grid grid-cols-3 gap-2 text-center">
+                <div class="bg-blue-50 rounded-lg p-2">
+                    <p class="text-xs text-gray-500">MA5_0</p>
+                    <p class="font-bold text-blue-600">{{ ma5.result.toFixed(3) }}</p>
+                </div>
+                <div class="bg-green-50 rounded-lg p-2">
+                    <p class="text-xs text-gray-500">MA10_0</p>
+                    <p class="font-bold text-green-600">{{ ma10.result.toFixed(3) }}</p>
+                </div>
+                <div class="bg-purple-50 rounded-lg p-2">
+                    <p class="text-xs text-gray-500">MA20_0</p>
+                    <p class="font-bold text-purple-600">{{ ma20.result.toFixed(3) }}</p>
+                </div>
+            </div>
         </div>
 
         <!-- MA5 -->
