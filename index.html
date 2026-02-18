@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>实时均线计算器</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css" rel="stylesheet">
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <script src="js/api-adapters.js"></script>
+    <script src="key.js"></script>
+</head>
+
+<body class="bg-gray-100 py-6 px-4">
+    <div id="app" class="max-w-xl mx-auto">
+        <h1 class="text-3xl font-bold text-green-600 text-center mb-2">实时均线计算器</h1>
+        <!-- <p class="text-center text-gray-500 mb-6">作者：小红他叔</p> -->
+
+        <!-- Disclaimer -->
+        <div class="bg-white rounded-lg shadow-md p-5 mb-6">
+            <h3 class="text-red-600 font-bold mb-3"><i class="fas fa-exclamation-triangle mr-2"></i>免责声明</h3>
+            <div class="text-gray-600 text-sm space-y-2">
+                <p>（1）本工具采用标准化算术移动平均线（MA）的正向计算规则，所有统计过程均基于已发生的历史客观数据。</p>
+                <p>（2）本工具输出的均线统计结果仅供参考素材，<strong class="text-red-500">不构成任何形式的投资建议</strong>。</p>
+                <p>（3）本工具不对统计结果的准确性作出任何保证，所有投资决策由用户独立作出，<strong class="text-red-500">需自行承担全部风险与责任</strong>。</p>
+                <p>（4）本工具<strong class="text-green-600">完全免费使用</strong>，任何收费行为均与工具开发方无关。</p>
+            </div>
+        </div>
+
+        <!-- Parameters -->
+        <div class="bg-white rounded-lg shadow-md p-5 mb-6">
+            <h3 class="text-gray-700 font-bold mb-3"><i class="fas fa-info-circle mr-2"></i>参数说明</h3>
+            <div class="text-gray-600 text-sm space-y-2">
+                <p><strong class="text-blue-600">AO</strong>：下个交易日的盘中实时价格</p>
+                <p><strong class="text-blue-600">A5/A10/A20</strong>：向前数 N 天的收盘价</p>
+                <p><strong class="text-blue-600">MA5_1/MA10_1/MA20_1</strong>：今天收盘后的 N 日均线</p>
+            </div>
+        </div>
+
+        <!-- API Configuration -->
+        <div class="bg-white rounded-lg shadow-md p-5 mb-6">
+            <div class="flex items-center justify-between cursor-pointer" @click="showConfig = !showConfig">
+                <h3 class="text-gray-700 font-bold"><i class="fas fa-cog mr-2"></i>配置API</h3>
+                <i :class="showConfig ? 'fas fa-chevron-up' : 'fas fa-chevron-down'" class="text-gray-500"></i>
+            </div>
+
+            <div v-show="showConfig" class="space-y-4  mt-4">
+                <div>
+                    <label class="block text-gray-700 font-medium mb-2">API提供商</label>
+
+                    <!-- 选择框 -->
+                    <div class="mb-2">
+                        <select v-model="apiConfig.provider"
+                            class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white">
+                            <option value="alltick">AllTick (A股推荐)</option>
+                            <option value="itick">iTick (支持浏览器直连)</option>
+                        </select>
+                    </div>
+
+                    <!-- 链接展示 -->
+                    <a :href="currentApiUrl" target="_blank"
+                        class="flex items-center gap-2 px-3 py-2 bg-blue-50 hover:bg-blue-100 rounded-lg border border-blue-200 transition-colors group">
+                        <i class="fas fa-globe text-blue-500 group-hover:text-blue-600"></i>
+                        <span class="text-blue-600 group-hover:text-blue-800 text-sm flex-1 truncate">
+                            {{ currentApiUrl }}
+                        </span>
+                        <i class="fas fa-external-link-alt text-blue-400 group-hover:text-blue-600 text-xs"></i>
+                    </a>
+
+                    <p class="text-xs text-gray-500 mt-2">
+                        <i class="fas fa-info-circle mr-1"></i>点击官网注册获取免费API Key
+                    </p>
+                </div>
+
+                <div>
+                    <label class="block text-gray-700 font-medium mb-2">API Key</label>
+                    <input type="password" v-model="apiConfig.apiKey"
+                        class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                        placeholder="请输入您的API Key">
+                </div>
+
+                <button @click="saveConfig"
+                    class="w-full bg-green-600 text-white py-3 rounded-lg font-bold hover:bg-green-700 transition">
+                    <i class="fas fa-save mr-2"></i>保存到你的设备上
+                </button>
+
+                <p v-if="configSaved" class="text-green-600 text-sm text-center">
+                    <i class="fas fa-check-circle mr-1"></i>配置已保存到本地
+                </p>
+            </div>
+        </div>
+
+        <!-- Stock Query -->
+        <div class="bg-white rounded-lg shadow-md p-5 mb-6">
+            <h3 class="text-gray-700 font-bold mb-4"><i class="fas fa-search mr-2"></i>股票数据查询</h3>
+
+            <div class="space-y-3">
+                <div>
+                    <label class="block text-gray-700 font-medium mb-2">股票代码</label>
+                    <input type="text" v-model="stockCode"
+                        class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                        placeholder="输入股票代码或名称（如：600519 或 贵州茅台）" @keyup.enter="fetchStockData">
+                    <p class="text-xs text-gray-500 mt-1">
+                        <i class="fas fa-lightbulb mr-1"></i>支持输入：①6位代码（600519）②公司名称（茅台）
+                    </p>
+                </div>
+
+                <button @click="fetchStockData" :disabled="loading || !apiConfig.apiKey"
+                    class="w-full bg-blue-600 text-white py-3 rounded-lg font-bold hover:bg-blue-700 transition disabled:bg-gray-400 disabled:cursor-not-allowed">
+                    <i :class="loading ? 'fas fa-spinner fa-spin' : 'fas fa-download'" class="mr-2"></i>
+                    {{ loading ? '获取中...' : '获取股票数据并自动填充' }}
+                </button>
+
+                <p v-if="error" class="text-red-600 text-sm bg-red-50 p-3 rounded-lg">
+                    <i class="fas fa-exclamation-circle mr-1"></i>{{ error }}
+                </p>
+
+                <p v-if="!apiConfig.apiKey && !showConfig" class="text-yellow-600 text-sm bg-yellow-50 p-3 rounded-lg">
+                    <i class="fas fa-info-circle mr-1"></i>请先在上方配置API Key
+                </p>
+
+                <p v-if="dataFetched" class="text-green-600 text-sm bg-green-50 p-3 rounded-lg">
+                    <i class="fas fa-check-circle mr-1"></i>数据已自动填充，可直接计算均线
+                </p>
+            </div>
+        </div>
+
+        <!-- Stock Info -->
+        <div v-if="stockInfo.code" class="bg-white rounded-lg shadow-md p-5 mb-6">
+            <div class="flex items-center justify-between mb-4">
+                <h3 class="text-gray-700 font-bold"><i class="fas fa-chart-line mr-2"></i>当日行情</h3>
+                <span class="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded">{{ stockInfo.code }}</span>
+            </div>
+            <div class="mb-4 pb-3 border-b border-gray-200">
+                <p class="text-2xl font-bold text-gray-900">{{ stockInfo.name || '未知名称' }}</p>
+                <p class="text-sm text-gray-500">{{ stockInfo.code }}</p>
+            </div>
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <p class="text-xs text-gray-500">最高价</p>
+                    <p class="text-lg font-semibold text-red-600">{{ stockInfo.high.toFixed(2) }}</p>
+                </div>
+                <div>
+                    <p class="text-xs text-gray-500">最低价</p>
+                    <p class="text-lg font-semibold text-green-600">{{ stockInfo.low.toFixed(2) }}</p>
+                </div>
+                <div>
+                    <p class="text-xs text-gray-500">开盘价</p>
+                    <p class="text-lg font-semibold text-gray-800">{{ stockInfo.open.toFixed(2) }}</p>
+                </div>
+                <div>
+                    <p class="text-xs text-gray-500">收盘价</p>
+                    <p class="text-lg font-semibold text-blue-600">{{ stockInfo.close.toFixed(2) }}</p>
+                </div>
+            </div>
+
+
+        </div>
+
+        <!-- Global AO -->
+        <div class="bg-white rounded-lg shadow-md p-5 mb-6">
+            <label class="block text-gray-700 font-medium mb-2">AO（明日盘中实时价格）</label>
+            <input type="number" v-model.number="ao" step="0.01"
+                class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                placeholder="输入明日盘中实时价格">
+        </div>
+
+        <!-- MA5 -->
+        <div class="bg-white rounded-lg shadow-md p-5 mb-6">
+            <h3 class="text-blue-600 font-bold mb-4"><i class="fas fa-calculator mr-2"></i>明日五日均线计算</h3>
+            <label class="block text-gray-700 font-medium mb-2">A5（前 5 日收盘价）</label>
+            <input type="number" v-model.number="ma5.a5" step="0.01"
+                class="w-full px-4 py-3 border border-gray-300 rounded-lg mb-3" placeholder="输入前5日收盘价">
+            <label class="block text-gray-700 font-medium mb-2">MA5_1（当日 MA5）</label>
+            <input type="number" v-model.number="ma5.ma5_1" step="0.001"
+                class="w-full px-4 py-3 border border-gray-300 rounded-lg mb-3" placeholder="输入当日MA5">
+            <button @click="calculateMA5"
+                class="w-full bg-blue-600 text-white py-3 rounded-lg font-bold hover:bg-blue-700 transition">计算 5
+                日均线</button>
+            <div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-600 rounded">
+                <p class="font-bold text-blue-800">MA5_0 = {{ ma5.result.toFixed(3) }}</p>
+            </div>
+        </div>
+
+        <!-- MA10 -->
+        <div class="bg-white rounded-lg shadow-md p-5 mb-6">
+            <h3 class="text-green-600 font-bold mb-4"><i class="fas fa-calculator mr-2"></i>明日十日均线计算</h3>
+            <label class="block text-gray-700 font-medium mb-2">A10（前 10 日收盘价）</label>
+            <input type="number" v-model.number="ma10.a10" step="0.01"
+                class="w-full px-4 py-3 border border-gray-300 rounded-lg mb-3" placeholder="输入前10日收盘价">
+            <label class="block text-gray-700 font-medium mb-2">MA10_1（当日 MA10）</label>
+            <input type="number" v-model.number="ma10.ma10_1" step="0.001"
+                class="w-full px-4 py-3 border border-gray-300 rounded-lg mb-3" placeholder="输入当日MA10">
+            <button @click="calculateMA10"
+                class="w-full bg-green-600 text-white py-3 rounded-lg font-bold hover:bg-green-700 transition">计算 10
+                日均线</button>
+            <div class="mt-4 p-3 bg-green-50 border-l-4 border-green-600 rounded">
+                <p class="font-bold text-green-800">MA10_0 = {{ ma10.result.toFixed(3) }}</p>
+            </div>
+        </div>
+
+        <!-- MA20 -->
+        <div class="bg-white rounded-lg shadow-md p-5 mb-6">
+            <h3 class="text-purple-600 font-bold mb-4"><i class="fas fa-calculator mr-2"></i>明日二十日均线计算</h3>
+            <label class="block text-gray-700 font-medium mb-2">A20（前 20 日收盘价）</label>
+            <input type="number" v-model.number="ma20.a20" step="0.01"
+                class="w-full px-4 py-3 border border-gray-300 rounded-lg mb-3" placeholder="输入前20日收盘价">
+            <label class="block text-gray-700 font-medium mb-2">MA20_1（当日 MA20）</label>
+            <input type="number" v-model.number="ma20.ma20_1" step="0.001"
+                class="w-full px-4 py-3 border border-gray-300 rounded-lg mb-3" placeholder="输入当日MA20">
+            <button @click="calculateMA20"
+                class="w-full bg-purple-600 text-white py-3 rounded-lg font-bold hover:bg-purple-700 transition">计算 20
+                日均线</button>
+            <div class="mt-4 p-3 bg-purple-50 border-l-4 border-purple-600 rounded">
+                <p class="font-bold text-purple-800">MA20_0 = {{ ma20.result.toFixed(3) }}</p>
+            </div>
+        </div>
+
+        <p class="text-center text-gray-400 text-sm mt-8">© 实时均线计算器</p>
+    </div>
+
+    <script src="js/app.js"></script>
+</body>
+
+</html>
