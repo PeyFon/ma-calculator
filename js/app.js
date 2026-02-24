@@ -7,7 +7,7 @@ window.MACalc = window.MACalc || {};
   const { createApp, ref, reactive, onMounted, watch } = Vue;
 
   // CORS 代理（用于腾讯接口）
-  const CORS_PROXY = "https://corsproxy.io/?";
+  const CORS_PROXY = "https://api.allorigins.win/raw?url=";
 
   /**
    * 解码 Unicode 转义序列
@@ -22,52 +22,92 @@ window.MACalc = window.MACalc || {};
   }
 
   /**
-   * 通过腾讯财经接口查询股票代码
+   * 多代理兜底请求
+   * @param {string} url - 目标URL
+   * @returns {Promise<string>} 返回响应文本
+   */
+  async function fetchWithCorsProxies(url) {
+    const proxies = [
+      { name: 'jina', url: `https://r.jina.ai/http://${encodeURIComponent(url)}` },
+      { name: 'codetabs', url: `https://api.codetabs.com/v1/proxy/?quest=${encodeURIComponent(url)}` },
+      { name: 'allorigins', url: `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}` }
+    ];
+
+    let lastError;
+    for (const proxy of proxies) {
+      try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 8000);
+
+        const response = await fetch(proxy.url, { signal: controller.signal });
+        clearTimeout(timeoutId);
+
+        if (!response.ok) continue;
+        const text = await response.text();
+
+        // 检查是否返回了错误页面
+        if (text.includes('500 Internal Server Error') ||
+            text.includes('400 Bad Request') ||
+            text.includes('403 Forbidden')) {
+          continue;
+        }
+        return text;
+      } catch (e) {
+        lastError = e;
+      }
+    }
+    throw new Error(lastError?.message || '所有CORS代理均失败');
+  }
+
+  /**
+   * 通过东方财富接口查询股票代码
    * @param {string} name - 股票名称或部分代码
    * @param {string} market - 目标市场 (CN/HK)
    * @returns {Promise<Object|null>}
    */
   async function searchStockCodeByName(name, market) {
-    const targetUrl = `https://smartbox.gtimg.cn/s3/?q=${encodeURIComponent(name)}&t=all`;
-    const searchUrl = `${CORS_PROXY}${encodeURIComponent(targetUrl)}`;
+    const searchUrl = `https://searchapi.eastmoney.com/api/suggest/get?input=${encodeURIComponent(name)}&type=14&count=10`;
 
     try {
-      const response = await fetch(searchUrl);
-      const text = await response.text();
-      const match = text.match(/v_hint="([^"]+)"/);
-      if (!match) return null;
-
-      const entries = match[1].split("^");
-      for (const entry of entries) {
-        if (!entry.trim()) continue;
-        const parts = entry.split("~");
-        if (parts.length >= 5) {
-          const prefix = parts[0];
-          const codeNum = parts[1];
-          const stockName = decodeUnicode(parts[2]);
-          const stockType = parts[4];
-
-          if (market === "HK") {
-            if (
-              prefix === "hk" &&
-              stockType === "GP" &&
-              /^\d{4,5}$/.test(codeNum)
-            ) {
+      const text = await fetchWithCorsProxies(searchUrl);
+      
+      // jina.ai 返回 Markdown 格式，需要提取 JSON 部分
+      let jsonText = text;
+      const mdMatch = text.match(/\{[\s\S]*\}/);
+      if (mdMatch) {
+        jsonText = mdMatch[0];
+      }
+      
+      const data = JSON.parse(jsonText);
+      
+      if (data.QuotationCodeTable?.Data?.length > 0) {
+        const stocks = data.QuotationCodeTable.Data;
+        
+        // 港股市场：尝试匹配港股代码
+        if (market === "HK") {
+          for (const stock of stocks) {
+            const code = stock.Code;
+            // 港股代码通常是5位数字，以0开头
+            if (/^0\d{4}$/.test(code)) {
               return {
-                code: codeNum,
-                name: stockName,
-                fullCode: prefix + codeNum
+                code: code.replace(/^0+/, '') || code, // 去掉前导0
+                name: stock.Name,
+                fullCode: "hk" + code.replace(/^0+/, '')
               };
             }
-          } else {
-            if (
-              (prefix === "sh" || prefix === "sz") &&
-              /^\d{6}$/.test(codeNum)
-            ) {
+          }
+          // 港股没找到结果，返回null让用户手动输入
+          return null;
+        } else {
+          // A股市场
+          for (const stock of stocks) {
+            const code = stock.Code;
+            if (/^\d{6}$/.test(code)) {
+              const prefix = stock.MktNum === "1" ? "sh" : "sz";
               return {
-                code: codeNum,
-                name: stockName,
-                fullCode: prefix + codeNum
+                code: code,
+                name: stock.Name,
+                fullCode: prefix + code
               };
             }
           }
@@ -112,7 +152,7 @@ window.MACalc = window.MACalc || {};
       const showMA20 = ref(false);
 
       const apiConfig = reactive({
-        provider: "alltick",
+        provider: "itick",
         apiKey: ""
       });
 

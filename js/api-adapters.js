@@ -22,6 +22,19 @@ window.MACalc = window.MACalc || {};
                 signal: controller.signal
             });
             clearTimeout(timeoutId);
+            
+            // jina.ai 代理返回 Markdown 格式，需要提取 JSON
+            const isJinaProxy = url.includes('r.jina.ai/http');
+            if (isJinaProxy) {
+                const text = await response.text();
+                const mdMatch = text.match(/\{[\s\S]*\}/);
+                if (mdMatch) {
+                    const jsonStr = mdMatch[0];
+                    const blob = new Blob([jsonStr], { type: 'application/json' });
+                    return new Response(blob, { status: response.status, statusText: response.statusText });
+                }
+            }
+            
             return response;
         } catch (e) {
             clearTimeout(timeoutId);
@@ -86,7 +99,7 @@ window.MACalc = window.MACalc || {};
      * @extends BaseAdapter
      */
     class AllTickAdapter extends BaseAdapter {
-        static CORS_PROXY = 'https://corsproxy.io/?';
+        static CORS_PROXY = 'https://r.jina.ai/http://';
 
         /**
          * 查询股票基本信息
