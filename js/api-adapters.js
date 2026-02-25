@@ -284,8 +284,7 @@ window.MACalc = window.MACalc || {};
         // CORS代理列表
         static CORS_PROXIES = [
             'https://r.jina.ai/http://',
-            'https://api.allorigins.win/raw?url=',
-            'https://api.codetabs.com/v1/proxy/?quest='
+            'https://corsproxy.io/?'
         ];
 
         // 请求间隔（毫秒）
@@ -351,17 +350,21 @@ window.MACalc = window.MACalc || {};
         buildProxyUrl(url) {
             const proxy = this.getCurrentProxy();
             
-            // 统一处理：移除目标URL的协议前缀，只编码路径部分
-            let targetUrl = url;
-            if (url.startsWith('http://')) {
-                targetUrl = url.substring(7);
-            } else if (url.startsWith('https://')) {
-                targetUrl = url.substring(8);
-            }
-            
             // jina.ai代理格式：https://r.jina.ai/http:// + 目标URL(不带协议)
             if (proxy.includes('r.jina.ai')) {
+                // 移除协议前缀
+                let targetUrl = url;
+                if (url.startsWith('http://')) {
+                    targetUrl = url.substring(7);
+                } else if (url.startsWith('https://')) {
+                    targetUrl = url.substring(8);
+                }
                 return `${proxy}${encodeURIComponent(targetUrl)}`;
+            }
+            
+            // corsproxy.io格式：https://corsproxy.io/?url= + 完整URL
+            if (proxy.includes('corsproxy.io')) {
+                return `${proxy}${encodeURIComponent(url)}`;
             }
             
             // 其他代理：完整URL编码
@@ -536,8 +539,7 @@ window.MACalc = window.MACalc || {};
         // CORS代理列表
         static CORS_PROXIES = [
             'https://r.jina.ai/http://',
-            'https://api.allorigins.win/raw?url=',
-            'https://api.codetabs.com/v1/proxy/?quest='
+            'https://corsproxy.io/?'
         ];
 
         // 请求间隔（毫秒）
@@ -603,17 +605,21 @@ window.MACalc = window.MACalc || {};
         buildProxyUrl(url) {
             const proxy = this.getCurrentProxy();
             
-            // 统一处理：移除目标URL的协议前缀，只编码路径部分
-            let targetUrl = url;
-            if (url.startsWith('http://')) {
-                targetUrl = url.substring(7);
-            } else if (url.startsWith('https://')) {
-                targetUrl = url.substring(8);
-            }
-            
             // jina.ai代理格式：https://r.jina.ai/http:// + 目标URL(不带协议)
             if (proxy.includes('r.jina.ai')) {
+                // 移除协议前缀
+                let targetUrl = url;
+                if (url.startsWith('http://')) {
+                    targetUrl = url.substring(7);
+                } else if (url.startsWith('https://')) {
+                    targetUrl = url.substring(8);
+                }
                 return `${proxy}${encodeURIComponent(targetUrl)}`;
+            }
+            
+            // corsproxy.io格式：https://corsproxy.io/?url= + 完整URL
+            if (proxy.includes('corsproxy.io')) {
+                return `${proxy}${encodeURIComponent(url)}`;
             }
             
             // 其他代理：完整URL编码
