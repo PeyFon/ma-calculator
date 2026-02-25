@@ -281,10 +281,10 @@ window.MACalc = window.MACalc || {};
      * 特性：5秒间隔请求 + 代理切换 + 指数退避重试
      */
     class EastMoneyAdapter extends BaseAdapter {
-        // CORS代理列表
+        // CORS代理列表（corsproxy.io优先，r.jina.ai对东方财富有限制）
         static CORS_PROXIES = [
-            'https://r.jina.ai/http://',
-            'https://corsproxy.io/?'
+            'https://corsproxy.io/?',
+            'https://r.jina.ai/http://'
         ];
 
         // 请求间隔（毫秒）
