@@ -45,7 +45,6 @@ window.MACalc = window.MACalc || {};
         if (!response.ok) continue;
         const text = await response.text();
 
-        // 检查是否返回了错误页面
         if (text.includes('500 Internal Server Error') ||
             text.includes('400 Bad Request') ||
             text.includes('403 Forbidden')) {
@@ -71,7 +70,6 @@ window.MACalc = window.MACalc || {};
     try {
       const text = await fetchWithCorsProxies(searchUrl);
       
-      // jina.ai 返回 Markdown 格式，需要提取 JSON 部分
       let jsonText = text;
       const mdMatch = text.match(/\{[\s\S]*\}/);
       if (mdMatch) {
@@ -83,23 +81,20 @@ window.MACalc = window.MACalc || {};
       if (data.QuotationCodeTable?.Data?.length > 0) {
         const stocks = data.QuotationCodeTable.Data;
         
-        // 港股市场：尝试匹配港股代码
         if (market === "HK") {
           for (const stock of stocks) {
             const code = stock.Code;
-            // 港股代码通常是5位数字，以0开头
             if (/^0\d{4}$/.test(code)) {
+              // 港股代码保持5位格式 (00700)
               return {
-                code: code.replace(/^0+/, '') || code, // 去掉前导0
+                code: code,
                 name: stock.Name,
-                fullCode: "hk" + code.replace(/^0+/, '')
+                fullCode: "hk" + code
               };
             }
           }
-          // 港股没找到结果，返回null让用户手动输入
           return null;
         } else {
-          // A股市场
           for (const stock of stocks) {
             const code = stock.Code;
             if (/^\d{6}$/.test(code)) {
@@ -120,7 +115,8 @@ window.MACalc = window.MACalc || {};
     }
   }
 
-  createApp({
+  // 创建Vue实例
+  const app = createApp({
     setup() {
       // 1. 基础响应式状态
       const a0 = ref(0);
@@ -137,38 +133,16 @@ window.MACalc = window.MACalc || {};
         close: 0
       });
 
-      const showConfig = ref(false);
       const stockCode = ref("");
       const market = ref("CN");
       const loading = ref(false);
       const error = ref("");
-      const configSaved = ref(false);
       const dataFetched = ref(false);
       const searchHistory = ref([]);
 
-      // 模块折叠状态
       const showMA5 = ref(false);
       const showMA10 = ref(false);
       const showMA20 = ref(false);
-
-      const apiConfig = reactive({
-        provider: "itick",
-        apiKey: ""
-      });
-
-      const API_URLS = {
-        alltick: "https://alltick.co/",
-        itick: "https://itick.org/"
-      };
-
-      const currentApiUrl = Vue.computed(
-        () => API_URLS[apiConfig.provider] || ""
-      );
-
-      const apiKeys = reactive({
-        alltick: "",
-        itick: ""
-      });
 
       // 2. 核心计算方法
       const calculateMA5 = () => {
@@ -187,48 +161,7 @@ window.MACalc = window.MACalc || {};
         calculateMA20();
       };
 
-      // 3. 配置管理
-      const loadApiConfig = () => {
-        try {
-          const saved = localStorage.getItem("ma-calculator-api-config");
-          if (saved) {
-            const config = JSON.parse(saved);
-            if (config.provider) apiConfig.provider = config.provider;
-            if (config.apiKeys) {
-              Object.assign(apiKeys, config.apiKeys);
-              apiConfig.apiKey = apiKeys[apiConfig.provider] || "";
-            }
-          }
-        } catch (e) {}
-      };
-
-      const saveApiConfig = () => {
-        try {
-          apiKeys[apiConfig.provider] = apiConfig.apiKey;
-          const config = {
-            provider: apiConfig.provider,
-            apiKeys: { ...apiKeys }
-          };
-          localStorage.setItem(
-            "ma-calculator-api-config",
-            JSON.stringify(config)
-          );
-          return true;
-        } catch (e) {
-          return false;
-        }
-      };
-
-      const saveConfig = () => {
-        if (saveApiConfig()) {
-          configSaved.value = true;
-          setTimeout(() => {
-            configSaved.value = false;
-          }, 3000);
-        }
-      };
-
-      // 4. 搜索历史管理
+      // 3. 搜索历史管理
       const loadSearchHistory = () => {
         try {
           const saved = localStorage.getItem("ma-calculator-search-history");
@@ -272,12 +205,13 @@ window.MACalc = window.MACalc || {};
         }
       };
 
-      // 5. 数据抓取逻辑
+      // 4. 数据抓取逻辑
       const fetchStockData = async () => {
-        if (!apiConfig.apiKey) {
-          error.value = "请先在数据源配置中填写访问秘钥";
+        // 防抖：如果正在加载，直接返回
+        if (loading.value) {
           return;
         }
+        
         if (!stockCode.value) {
           error.value = "请输入股票代码或名称";
           return;
@@ -292,14 +226,13 @@ window.MACalc = window.MACalc || {};
         dataFetched.value = false;
 
         try {
-          // 检查搜索组件是否已加载（通过命名空间访问）
           if (!MACalc.AdapterFactory) {
             throw new Error(
               "应用核心组件加载失败，请尝试刷新页面。如果持续出现，请检查网络是否能访问 CDN。"
             );
           }
 
-          // 如果输入包含中文，先进行搜索
+          // 如果输入包含中文，进行搜索
           if (/[\u4e00-\u9fa5]/.test(actualCode)) {
             const searchResult = await searchStockCodeByName(
               actualCode,
@@ -323,19 +256,28 @@ window.MACalc = window.MACalc || {};
               throw new Error("请输入正确的 A 股代码（6位数字）");
           }
 
-          const adapter = MACalc.AdapterFactory.create(apiConfig.provider);
-
-          // 并行获取名称（如果之前没搜到）和行情
-          const [stockName, data] = await Promise.all([
-            searchedName
-              ? Promise.resolve(searchedName)
-              : adapter.fetchStockName(
-                  actualCode,
-                  apiConfig.apiKey,
-                  currentMarket
-                ),
-            adapter.fetchStockData(actualCode, apiConfig.apiKey, currentMarket)
-          ]);
+          // 优先用东方财富获取K线数据，失败则用腾讯财经备用
+          let data = null;
+          let usedProvider = '';
+          
+          // 优先东方财富
+          try {
+            const eastmoneyAdapter = MACalc.AdapterFactory.create('eastmoney', currentMarket);
+            data = await eastmoneyAdapter.fetchStockData(actualCode, "", currentMarket);
+            usedProvider = 'eastmoney';
+          } catch (e) {
+            console.warn('东方财富获取失败，切换到腾讯财经:', e.message);
+            // 备用腾讯财经
+            try {
+              const tencentAdapter = MACalc.AdapterFactory.create('tencent', currentMarket);
+              data = await tencentAdapter.fetchStockData(actualCode, "", currentMarket);
+              usedProvider = 'tencent';
+            } catch (e2) {
+              throw new Error(`数据获取失败：东方财富(${e.message})、腾讯财经(${e2.message})均不可用`);
+            }
+          }
+          
+          console.log(`K线数据来源: ${usedProvider}`);
 
           // 填充数据
           a0.value = data.current;
@@ -347,7 +289,7 @@ window.MACalc = window.MACalc || {};
           ma20.ma20_1 = data.ma20_1;
 
           stockInfo.code = data.stockCode || actualCode;
-          stockInfo.name = stockName || data.stockName || "未知股票";
+          stockInfo.name = searchedName || data.stockName || "未知股票";
           stockInfo.high = data.high;
           stockInfo.low = data.low;
           stockInfo.open = data.open;
@@ -370,16 +312,8 @@ window.MACalc = window.MACalc || {};
         fetchStockData();
       };
 
-      // 6. 监听与生命周期
-      watch(
-        () => apiConfig.provider,
-        newProvider => {
-          apiConfig.apiKey = apiKeys[newProvider] || "";
-        }
-      );
-
+      // 5. 监听与生命周期
       onMounted(() => {
-        loadApiConfig();
         loadSearchHistory();
       });
 
@@ -389,29 +323,31 @@ window.MACalc = window.MACalc || {};
         ma10,
         ma20,
         stockInfo,
-        showConfig,
         stockCode,
         market,
         loading,
         error,
-        configSaved,
         dataFetched,
         searchHistory,
-        apiConfig,
         showMA5,
         showMA10,
         showMA20,
-        currentApiUrl,
         calculateMA5,
         calculateMA10,
         calculateMA20,
         calculateAll,
-        saveConfig,
         fetchStockData,
         removeSearchHistory,
         useSearchHistory,
         clearAllHistory
       };
     }
-  }).mount("#app");
+  });
+
+  // DOM加载完成后挂载Vue应用
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => app.mount("#app"));
+  } else {
+    app.mount("#app");
+  }
 })(window.MACalc);

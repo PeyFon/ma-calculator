@@ -29,6 +29,7 @@
         }
     </script>
     <script src="js/api-adapters.js"></script>
+    <script src="js/app.js"></script>
 </head>
 
 <body class="bg-gray-100 py-10 px-4 font-sans text-gray-900 antialiased selection:bg-blue-100 selection:text-blue-700">
@@ -77,420 +78,357 @@
             </div>
         </div>
 
-        <!-- API Configuration -->
-        <div
-            class="bg-white rounded-2xl shadow-sm border-0 ring-1 ring-gray-900/5 mb-6 overflow-hidden transition-all duration-300">
-            <div class="px-6 py-4 flex items-center justify-between cursor-pointer bg-white hover:bg-gray-50 transition-colors border-b border-gray-100"
-                @click="showConfig = !showConfig">
-                <h3 class="text-gray-900 font-semibold flex items-center text-sm uppercase tracking-wide">
-                    <i class="fas fa-terminal mr-3 text-blue-600"></i>数据源配置
-                </h3>
-                <i :class="showConfig ? 'rotate-180' : ''"
-                    class="fas fa-chevron-down text-gray-400 transition-transform duration-300"></i>
-            </div>
-
-            <div v-show="showConfig" class="p-6 space-y-6 bg-white">
-                <div class="grid md:grid-cols-2 gap-5">
+        <!-- Data Source Info -->
+        <div class="bg-white rounded-2xl shadow-sm border-0 ring-1 ring-gray-900/5 mb-6 p-6">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center">
+                    <div class="w-10 h-10 rounded-xl bg-emerald-500 text-white flex items-center justify-center mr-4">
+                        <i class="fas fa-database"></i>
+                    </div>
                     <div>
-                        <label
-                            class="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2 ml-1">数据源服务商</label>
-                        <div class="relative">
-                            <select v-model="apiConfig.provider"
-                                class="w-full pl-4 pr-10 py-3 bg-gray-100 border-0 rounded-xl text-sm text-gray-900 focus:ring-2 focus:ring-blue-500 focus:bg-white outline-none appearance-none transition-all">
-                                <option value="alltick">AllTick</option>
-                                <option value="itick">iTick</option>
-                            </select>
-                            <div
-                                class="absolute inset-y-0 right-0 flex items-center px-3 pointer-events-none text-gray-400">
-                                <i class="fas fa-sort"></i>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div>
-                        <label
-                            class="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2 ml-1">服务商官网</label>
-                        <a :href="currentApiUrl" target="_blank"
-                            class="flex items-center justify-between px-4 py-3 bg-blue-50 hover:bg-blue-100 border-0 rounded-xl text-blue-600 transition-colors group text-sm no-underline">
-                            <span class="truncate font-mono text-xs">{{ currentApiUrl }}</span>
-                            <i class="fas fa-external-link-alt ml-2 opacity-50 group-hover:opacity-100"></i>
-                        </a>
+                        <h3 class="text-gray-900 font-bold">数据源：东方财富 <span class="text-xs font-normal text-gray-400">(腾讯备用)</span></h3>
+                        <p class="text-xs text-gray-500">免密钥 · 实时行情 · 专业数据</p>
                     </div>
                 </div>
-
-                <div>
-                    <label
-                        class="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2 ml-1">访问密钥</label>
-                    <div class="relative">
-                        <input type="text" v-model="apiConfig.apiKey"
-                            class="w-full pl-10 pr-4 py-3 bg-gray-100 border-0 rounded-xl text-sm font-mono text-gray-900 placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:bg-white outline-none transition-all"
-                            placeholder="请输入你的访问密钥">
-                        <div class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none text-gray-400">
-                            <i class="fas fa-key text-xs"></i>
-                        </div>
-                    </div>
-                    <p class="text-xs text-gray-400 mt-2 flex items-center ml-1">
-                        <i class="fas fa-shield-alt mr-1.5"></i> 密钥仅保存在你的本地浏览器中，请放心使用。
-                    </p>
-                </div>
-
-                <div class="pt-4 border-t border-gray-100">
-                    <button @click="saveConfig"
-                        class="w-full bg-gray-900 hover:bg-black text-white py-3.5 rounded-xl text-sm font-bold tracking-wide transition-all shadow-sm hover:shadow-lg flex items-center justify-center">
-                        <i class="fas fa-save mr-2 text-gray-400"></i>保存配置
-                    </button>
-                    <p v-if="configSaved"
-                        class="text-emerald-500 text-xs text-center mt-3 flex items-center justify-center animate-fade-in-up">
-                        <i class="fas fa-check-circle mr-1.5"></i>配置已更新
-                    </p>
-                </div>
+                <a href="https://www.eastmoney.com/" target="_blank"
+                    class="text-blue-600 hover:text-blue-700 text-sm font-medium">
+                    访问官网 <i class="fas fa-external-link-alt ml-1"></i>
+                </a>
             </div>
         </div>
 
         <!-- Stock Query -->
-        <div class="bg-white rounded-2xl shadow-sm border-0 ring-1 ring-gray-900/5 mb-6 p-6">
-            <h3 class="text-gray-900 font-bold mb-5 flex items-center tracking-tight text-lg">
-                <i class="fas fa-search-dollar text-blue-600 mr-3"></i>行情查询
-            </h3>
+    <div class="bg-white rounded-2xl shadow-sm border-0 ring-1 ring-gray-900/5 mb-6 p-6">
+        <h3 class="text-gray-900 font-bold mb-5 flex items-center tracking-tight text-lg">
+            <i class="fas fa-search-dollar text-blue-600 mr-3"></i>行情查询
+        </h3>
 
-            <div class="space-y-5">
-                <!-- Market Toggle (Segmented Control) -->
-                <div class="flex p-1 bg-gray-100 rounded-xl">
-                    <button @click="market = 'CN'"
-                        :class="market === 'CN' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'"
-                        class="flex-1 py-2 rounded-lg text-sm font-semibold transition-all duration-200">
-                        CN · A股
-                    </button>
-                    <button @click="market = 'HK'"
-                        :class="market === 'HK' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'"
-                        class="flex-1 py-2 rounded-lg text-sm font-semibold transition-all duration-200">
-                        HK · 港股
-                    </button>
-                </div>
-
-                <!-- Search Input -->
-                <div class="relative group">
-                    <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                        <i class="fas fa-search text-gray-400 group-focus-within:text-blue-500 transition-colors"></i>
-                    </div>
-                    <input type="text" v-model="stockCode"
-                        class="block w-full pl-11 pr-10 py-4 bg-gray-50 border-0 rounded-2xl text-lg font-medium text-gray-900 placeholder-gray-400 focus:bg-white focus:ring-2 focus:ring-blue-500 outline-none transition-all font-mono tracking-wide"
-                        :placeholder="market === 'HK' ? '00700 / 腾讯控股' : '600519 / 贵州茅台'" @keyup.enter="fetchStockData">
-                    <div class="absolute inset-y-0 right-0 flex items-center pr-2">
-                        <button @click="stockCode = ''" v-if="stockCode"
-                            class="text-gray-300 hover:text-gray-500 p-2 rounded-full hover:bg-gray-100 transition-all">
-                            <i class="fas fa-times-circle"></i>
-                        </button>
-                    </div>
-                </div>
-
-                <!-- History Grid -->
-                <div v-if="searchHistory.length" class="mt-4">
-                    <div class="flex justify-between items-center mb-3 px-1">
-                        <span class="text-xs text-gray-400 font-semibold uppercase tracking-wider flex items-center">
-                            <i class="fas fa-history mr-1.5"></i>最近搜索
-                        </span>
-                        <button @click="clearAllHistory"
-                            class="text-xs text-gray-400 hover:text-rose-500 transition-colors flex items-center font-medium">
-                            <i class="fas fa-trash-alt mr-1"></i>清空
-                        </button>
-                    </div>
-                    <div class="grid grid-cols-2 gap-3">
-                        <div v-for="(item, index) in searchHistory" :key="item.code + item.market"
-                            class="flex items-center justify-between px-4 py-3 rounded-xl text-sm font-medium bg-gray-50 text-gray-600 border-0 hover:bg-blue-50 hover:text-blue-700 cursor-pointer transition-colors group"
-                            @click="useSearchHistory(item)">
-                            <div class="flex items-center overflow-hidden min-w-0">
-                                <span class="mr-2 font-bold flex-shrink-0 text-xs px-1.5 py-0.5 rounded-md"
-                                    :class="item.market === 'HK' ? 'bg-orange-100 text-orange-600' : 'bg-rose-100 text-rose-600'">
-                                    {{ item.market === 'HK' ? '港' : 'A' }}
-                                </span>
-                                <span class="truncate">{{ item.name || item.code }}</span>
-                            </div>
-                            <button @click.stop="removeSearchHistory(index)"
-                                class="ml-2 text-gray-300 group-hover:text-blue-400 hover:text-rose-500 focus:outline-none flex-shrink-0 transition-colors">
-                                <i class="fas fa-times"></i>
-                            </button>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Action Button -->
-                <button @click="fetchStockData" :disabled="loading || !apiConfig.apiKey"
-                    class="w-full flex items-center justify-center py-4 border-0 text-base font-bold rounded-2xl text-white bg-blue-600 hover:bg-blue-700 active:scale-[0.98] focus:outline-none focus:ring-4 focus:ring-blue-500/30 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-lg shadow-blue-500/30 mt-4">
-                    <i :class="loading ? 'fas fa-spinner fa-spin' : 'fas fa-bolt'" class="mr-2.5"></i>
-                    {{ loading ? '处理中...' : '获取最新行情' }}
+        <div class="space-y-5">
+            <!-- Market Toggle (Segmented Control) -->
+            <div class="flex p-1 bg-gray-100 rounded-xl">
+                <button @click="market = 'CN'"
+                    :class="market === 'CN' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'"
+                    class="flex-1 py-2 rounded-lg text-sm font-semibold transition-all duration-200">
+                    CN · A股
                 </button>
+                <button @click="market = 'HK'"
+                    :class="market === 'HK' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'"
+                    class="flex-1 py-2 rounded-lg text-sm font-semibold transition-all duration-200">
+                    HK · 港股
+                </button>
+            </div>
 
-                <!-- Alerts -->
-                <transition-group enter-active-class="transition duration-300 ease-out"
-                    enter-from-class="transform scale-95 opacity-0" enter-to-class="transform scale-100 opacity-100"
-                    leave-active-class="transition duration-200 ease-in"
-                    leave-from-class="transform scale-100 opacity-100" leave-to-class="transform scale-95 opacity-0">
-                    <div v-if="error" key="error" class="bg-rose-50 border-0 p-4 rounded-xl mt-4 flex items-start">
-                        <div class="flex-shrink-0 mt-0.5">
-                            <i class="fas fa-exclamation-circle text-rose-500"></i>
-                        </div>
-                        <div class="ml-3">
-                            <p class="text-sm font-medium text-rose-700">{{ error }}</p>
-                        </div>
-                    </div>
+            <!-- Search Input -->
+            <div class="relative group">
+                <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                    <i class="fas fa-search text-gray-400 group-focus-within:text-blue-500 transition-colors"></i>
+                </div>
+                <input type="text" v-model="stockCode"
+                    class="block w-full pl-11 pr-10 py-4 bg-gray-50 border-0 rounded-2xl text-lg font-medium text-gray-900 placeholder-gray-400 focus:bg-white focus:ring-2 focus:ring-blue-500 outline-none transition-all font-mono tracking-wide"
+                    :placeholder="market === 'HK' ? '00700 / 腾讯控股' : '600519 / 贵州茅台'" @keyup.enter="fetchStockData">
+                <div class="absolute inset-y-0 right-0 flex items-center pr-2">
+                    <button @click="stockCode = ''" v-if="stockCode"
+                        class="text-gray-300 hover:text-gray-500 p-2 rounded-full hover:bg-gray-100 transition-all">
+                        <i class="fas fa-times-circle"></i>
+                    </button>
+                </div>
+            </div>
 
-                    <div v-if="!apiConfig.apiKey && !showConfig" key="warning"
-                        class="bg-amber-50 border-0 p-4 rounded-xl mt-4 cursor-pointer hover:bg-amber-100 transition-colors flex items-start"
-                        @click="showConfig = true">
-                        <div class="flex-shrink-0 mt-0.5">
-                            <i class="fas fa-key text-amber-500"></i>
+            <!-- History Grid -->
+            <div v-if="searchHistory.length" class="mt-4">
+                <div class="flex justify-between items-center mb-3 px-1">
+                    <span class="text-xs text-gray-400 font-semibold uppercase tracking-wider flex items-center">
+                        <i class="fas fa-history mr-1.5"></i>最近搜索
+                    </span>
+                    <button @click="clearAllHistory"
+                        class="text-xs text-gray-400 hover:text-rose-500 transition-colors flex items-center font-medium">
+                        <i class="fas fa-trash-alt mr-1"></i>清空
+                    </button>
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                    <div v-for="(item, index) in searchHistory" :key="item.code + item.market"
+                        class="flex items-center justify-between px-4 py-3 rounded-xl text-sm font-medium bg-gray-50 text-gray-600 border-0 hover:bg-blue-50 hover:text-blue-700 cursor-pointer transition-colors group"
+                        @click="useSearchHistory(item)">
+                        <div class="flex items-center overflow-hidden min-w-0">
+                            <span class="mr-2 font-bold flex-shrink-0 text-xs px-1.5 py-0.5 rounded-md"
+                                :class="item.market === 'HK' ? 'bg-orange-100 text-orange-600' : 'bg-rose-100 text-rose-600'">
+                                {{ item.market === 'HK' ? '港' : 'A' }}
+                            </span>
+                            <span class="truncate">{{ item.name || item.code }}</span>
                         </div>
-                        <div class="ml-3">
-                            <p class="text-sm text-amber-800 font-bold">缺少访问密钥</p>
-                            <p class="text-xs text-amber-600 mt-1">请点击此处打开配置面板填写密钥。</p>
-                        </div>
+                        <button @click.stop="removeSearchHistory(index)"
+                            class="ml-2 text-gray-300 group-hover:text-blue-400 hover:text-rose-500 focus:outline-none flex-shrink-0 transition-colors">
+                            <i class="fas fa-times"></i>
+                        </button>
                     </div>
-                </transition-group>
+                </div>
+            </div>
+
+            <!-- Action Button -->
+            <button @click="fetchStockData"
+                :disabled="loading"
+                class="w-full flex items-center justify-center py-4 border-0 text-base font-bold rounded-2xl text-white bg-blue-600 hover:bg-blue-700 active:scale-[0.98] focus:outline-none focus:ring-4 focus:ring-blue-500/30 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-lg shadow-blue-500/30 mt-4">
+                <i :class="loading ? 'fas fa-spinner fa-spin' : 'fas fa-bolt'" class="mr-2.5"></i>
+                {{ loading ? '处理中...' : '获取最新行情' }}
+            </button>
+
+            <!-- Alerts -->
+            <transition-group enter-active-class="transition duration-300 ease-out"
+                enter-from-class="transform scale-95 opacity-0" enter-to-class="transform scale-100 opacity-100"
+                leave-active-class="transition duration-200 ease-in" leave-from-class="transform scale-100 opacity-100"
+                leave-to-class="transform scale-95 opacity-0">
+                <div v-if="error" key="error" class="bg-rose-50 border-0 p-4 rounded-xl mt-4 flex items-start">
+                    <div class="flex-shrink-0 mt-0.5">
+                        <i class="fas fa-exclamation-circle text-rose-500"></i>
+                    </div>
+                    <div class="ml-3">
+                        <p class="text-sm font-medium text-rose-700">{{ error }}</p>
+                    </div>
+                </div>
+            </transition-group>
+        </div>
+    </div>
+
+    <!-- Stock Info -->
+    <transition enter-active-class="transition duration-500 ease-out"
+        enter-from-class="transform translate-y-4 opacity-0" enter-to-class="transform translate-y-0 opacity-100">
+        <div v-if="stockInfo.code"
+            class="bg-white rounded-3xl shadow-lg shadow-gray-200/50 border-0 ring-1 ring-gray-900/5 mb-6 overflow-hidden">
+            <!-- Header -->
+            <div
+                class="bg-white/50 backdrop-blur-xl px-6 py-5 border-b border-gray-100 flex justify-between items-center">
+                <div>
+                    <h2 class="text-xl md:text-2xl font-bold text-gray-900 tracking-tight mb-1">{{ stockInfo.name ||
+                        '未知股票' }}</h2>
+                    <span
+                        class="text-xs font-mono font-medium text-gray-500 bg-gray-100 px-2 py-1 rounded-md tracking-wider">{{
+                        stockInfo.code }}</span>
+                </div>
+                <div class="text-right">
+                    <span class="block text-2xl md:text-3xl font-bold tracking-tight font-mono"
+                        :class="stockInfo.close > stockInfo.open ? 'text-rose-500' : (stockInfo.close < stockInfo.open ? 'text-emerald-500' : 'text-gray-700')">
+                        {{ stockInfo.close.toFixed(2) }}
+                    </span>
+                    <span
+                        class="text-xs md:text-sm text-gray-400 uppercase tracking-widest font-bold mt-1 block">当前价格</span>
+                </div>
+            </div>
+
+            <!-- Grid Stats -->
+            <div class="grid grid-cols-3 divide-x divide-gray-100">
+                <div class="p-5 text-center hover:bg-gray-50 transition-colors">
+                    <span
+                        class="block text-xs md:text-sm text-gray-400 uppercase tracking-widest font-bold mb-1.5">今开</span>
+                    <span class="block text-sm md:text-xl font-mono font-bold text-gray-800">{{
+                        stockInfo.open.toFixed(2)
+                        }}</span>
+                </div>
+                <div class="p-5 text-center hover:bg-gray-50 transition-colors">
+                    <span
+                        class="block text-xs md:text-sm text-gray-400 uppercase tracking-widest font-bold mb-1.5">最高</span>
+                    <span class="block text-sm md:text-xl font-mono font-bold text-rose-500">{{
+                        stockInfo.high.toFixed(2)
+                        }}</span>
+                </div>
+                <div class="p-5 text-center hover:bg-gray-50 transition-colors">
+                    <span
+                        class="block text-xs md:text-sm text-gray-400 uppercase tracking-widest font-bold mb-1.5">最低</span>
+                    <span class="block text-sm md:text-xl font-mono font-bold text-emerald-500">{{
+                        stockInfo.low.toFixed(2)
+                        }}</span>
+                </div>
+            </div>
+        </div>
+    </transition>
+
+    <!-- A0 Input Section -->
+    <div class="bg-white rounded-3xl shadow-sm border-0 ring-1 ring-gray-900/5 mb-8 p-8 relative overflow-hidden">
+        <div class="absolute -top-6 -right-6 p-4 opacity-[0.03] pointer-events-none transform rotate-12">
+            <i class="fas fa-chart-line text-9xl"></i>
+        </div>
+
+        <label class="block text-sm font-bold text-gray-500 mb-4 tracking-wide uppercase flex items-center">
+            <span
+                class="bg-blue-600 text-white w-6 h-6 rounded-full flex items-center justify-center text-xs mr-3 shadow-md shadow-blue-500/30">1</span>
+            输入 A0 (下个交易日盘中价)
+        </label>
+
+        <div class="relative group max-w-lg mx-auto">
+            <input type="number" v-model.number="a0" step="0.01"
+                class="block w-full px-6 py-5 text-2xl md:text-4xl font-mono text-center font-bold text-blue-600 bg-gray-50 border-0 rounded-2xl focus:bg-white focus:ring-4 focus:ring-blue-500/20 outline-none transition-all placeholder-gray-300"
+                placeholder="0.00" @change="calculateAll">
+            <div class="absolute inset-y-0 right-0 pr-6 flex items-center pointer-events-none">
+                <span class="text-gray-400 font-bold text-sm">CNY/HKD</span>
             </div>
         </div>
 
-        <!-- Stock Info -->
-        <transition enter-active-class="transition duration-500 ease-out"
-            enter-from-class="transform translate-y-4 opacity-0" enter-to-class="transform translate-y-0 opacity-100">
-            <div v-if="stockInfo.code"
-                class="bg-white rounded-3xl shadow-lg shadow-gray-200/50 border-0 ring-1 ring-gray-900/5 mb-6 overflow-hidden">
-                <!-- Header -->
+        <!-- Dynamic Result Preview -->
+        <transition name="fade">
+            <div v-if="a0" class="mt-8 grid grid-cols-3 gap-2 md:gap-4">
                 <div
-                    class="bg-white/50 backdrop-blur-xl px-6 py-5 border-b border-gray-100 flex justify-between items-center">
-                    <div>
-                        <h2 class="text-xl md:text-2xl font-bold text-gray-900 tracking-tight mb-1">{{ stockInfo.name ||
-                            '未知股票' }}</h2>
-                        <span
-                            class="text-xs font-mono font-medium text-gray-500 bg-gray-100 px-2 py-1 rounded-md tracking-wider">{{
-                            stockInfo.code }}</span>
-                    </div>
-                    <div class="text-right">
-                        <span class="block text-2xl md:text-3xl font-bold tracking-tight font-mono"
-                            :class="stockInfo.close > stockInfo.open ? 'text-rose-500' : (stockInfo.close < stockInfo.open ? 'text-emerald-500' : 'text-gray-700')">
-                            {{ stockInfo.close.toFixed(2) }}
-                        </span>
-                        <span
-                            class="text-xs md:text-sm text-gray-400 uppercase tracking-widest font-bold mt-1 block">当前价格</span>
-                    </div>
+                    class="bg-white rounded-2xl p-2 md:p-4 border border-gray-100 shadow-lg shadow-blue-500/5 text-center transform transition hover:-translate-y-1 hover:shadow-xl hover:shadow-blue-500/10 ring-1 ring-gray-900/5">
+                    <p class="text-xs md:text-sm text-gray-400 font-bold uppercase tracking-wider mb-2">MA5</p>
+                    <p class="font-mono text-sm md:text-lg font-bold text-blue-600 tracking-tighter">{{
+                        ma5.result.toFixed(3) }}</p>
                 </div>
-
-                <!-- Grid Stats -->
-                <div class="grid grid-cols-3 divide-x divide-gray-100">
-                    <div class="p-5 text-center hover:bg-gray-50 transition-colors">
-                        <span
-                            class="block text-xs md:text-sm text-gray-400 uppercase tracking-widest font-bold mb-1.5">今开</span>
-                        <span class="block text-sm md:text-xl font-mono font-bold text-gray-800">{{
-                            stockInfo.open.toFixed(2)
-                            }}</span>
-                    </div>
-                    <div class="p-5 text-center hover:bg-gray-50 transition-colors">
-                        <span
-                            class="block text-xs md:text-sm text-gray-400 uppercase tracking-widest font-bold mb-1.5">最高</span>
-                        <span class="block text-sm md:text-xl font-mono font-bold text-rose-500">{{
-                            stockInfo.high.toFixed(2)
-                            }}</span>
-                    </div>
-                    <div class="p-5 text-center hover:bg-gray-50 transition-colors">
-                        <span
-                            class="block text-xs md:text-sm text-gray-400 uppercase tracking-widest font-bold mb-1.5">最低</span>
-                        <span class="block text-sm md:text-xl font-mono font-bold text-emerald-500">{{
-                            stockInfo.low.toFixed(2)
-                            }}</span>
-                    </div>
+                <div
+                    class="bg-white rounded-2xl p-2 md:p-4 border border-gray-100 shadow-lg shadow-amber-500/5 text-center transform transition hover:-translate-y-1 hover:shadow-xl hover:shadow-amber-500/10 ring-1 ring-gray-900/5">
+                    <p class="text-xs md:text-sm text-gray-400 font-bold uppercase tracking-wider mb-2">MA10</p>
+                    <p class="font-mono text-sm md:text-lg font-bold text-amber-500 tracking-tighter">{{
+                        ma10.result.toFixed(3) }}</p>
+                </div>
+                <div
+                    class="bg-white rounded-2xl p-2 md:p-4 border border-gray-100 shadow-lg shadow-purple-500/5 text-center transform transition hover:-translate-y-1 hover:shadow-xl hover:shadow-purple-500/10 ring-1 ring-gray-900/5">
+                    <p class="text-xs md:text-sm text-gray-400 font-bold uppercase tracking-wider mb-2">MA20</p>
+                    <p class="font-mono text-sm md:text-lg font-bold text-purple-600 tracking-tighter">{{
+                        ma20.result.toFixed(3) }}</p>
                 </div>
             </div>
         </transition>
+    </div>
 
-        <!-- A0 Input Section -->
-        <div class="bg-white rounded-3xl shadow-sm border-0 ring-1 ring-gray-900/5 mb-8 p-8 relative overflow-hidden">
-            <div class="absolute -top-6 -right-6 p-4 opacity-[0.03] pointer-events-none transform rotate-12">
-                <i class="fas fa-chart-line text-9xl"></i>
+    <!-- Calculation Cards Grid -->
+    <div class="space-y-6">
+        <!-- MA5 Card -->
+        <div
+            class="bg-white rounded-3xl shadow-sm border-0 ring-1 ring-gray-900/5 overflow-hidden transition-all duration-300 hover:shadow-lg hover:shadow-blue-500/5">
+            <div class="px-6 py-5 flex items-center justify-between cursor-pointer bg-white hover:bg-gray-50 transition-colors border-b border-gray-100"
+                @click="showMA5 = !showMA5">
+                <div class="flex items-center">
+                    <div
+                        class="w-10 h-10 rounded-xl bg-blue-500 text-white flex items-center justify-center mr-4 font-bold text-sm shadow-md shadow-blue-500/20">
+                        5</div>
+                    <h3 class="font-bold text-gray-900 tracking-tight text-lg">MA5 <span
+                            class="font-normal text-gray-400 text-sm ml-1.5">周线趋势</span></h3>
+                </div>
+                <i :class="showMA5 ? 'rotate-180' : ''"
+                    class="fas fa-chevron-down text-gray-300 transition-transform duration-300"></i>
             </div>
 
-            <label class="block text-sm font-bold text-gray-500 mb-4 tracking-wide uppercase flex items-center">
-                <span
-                    class="bg-blue-600 text-white w-6 h-6 rounded-full flex items-center justify-center text-xs mr-3 shadow-md shadow-blue-500/30">1</span>
-                输入 A0 (下个交易日盘中价)
-            </label>
-
-            <div class="relative group max-w-lg mx-auto">
-                <input type="number" v-model.number="a0" step="0.01"
-                    class="block w-full px-6 py-5 text-2xl md:text-4xl font-mono text-center font-bold text-blue-600 bg-gray-50 border-0 rounded-2xl focus:bg-white focus:ring-4 focus:ring-blue-500/20 outline-none transition-all placeholder-gray-300"
-                    placeholder="0.00" @change="calculateAll">
-                <div class="absolute inset-y-0 right-0 pr-6 flex items-center pointer-events-none">
-                    <span class="text-gray-400 font-bold text-sm">CNY/HKD</span>
-                </div>
-            </div>
-
-            <!-- Dynamic Result Preview -->
-            <transition name="fade">
-                <div v-if="a0" class="mt-8 grid grid-cols-3 gap-2 md:gap-4">
-                    <div
-                        class="bg-white rounded-2xl p-2 md:p-4 border border-gray-100 shadow-lg shadow-blue-500/5 text-center transform transition hover:-translate-y-1 hover:shadow-xl hover:shadow-blue-500/10 ring-1 ring-gray-900/5">
-                        <p class="text-xs md:text-sm text-gray-400 font-bold uppercase tracking-wider mb-2">MA5</p>
-                        <p class="font-mono text-sm md:text-lg font-bold text-blue-600 tracking-tighter">{{
-                            ma5.result.toFixed(3) }}</p>
+            <div v-show="showMA5" class="p-6 bg-white">
+                <div class="grid grid-cols-2 gap-5 mb-6">
+                    <div>
+                        <label class="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">A5
+                            (前5日收盘价)</label>
+                        <input type="number" v-model.number="ma5.a5" step="0.01"
+                            class="w-full bg-gray-50 border-0 rounded-xl px-4 py-3 font-mono text-sm focus:ring-2 focus:ring-blue-500 focus:bg-white outline-none transition-all placeholder-gray-300"
+                            :class="{ 'bg-blue-50/50': loading }">
                     </div>
-                    <div
-                        class="bg-white rounded-2xl p-2 md:p-4 border border-gray-100 shadow-lg shadow-amber-500/5 text-center transform transition hover:-translate-y-1 hover:shadow-xl hover:shadow-amber-500/10 ring-1 ring-gray-900/5">
-                        <p class="text-xs md:text-sm text-gray-400 font-bold uppercase tracking-wider mb-2">MA10</p>
-                        <p class="font-mono text-sm md:text-lg font-bold text-amber-500 tracking-tighter">{{
-                            ma10.result.toFixed(3) }}</p>
-                    </div>
-                    <div
-                        class="bg-white rounded-2xl p-2 md:p-4 border border-gray-100 shadow-lg shadow-purple-500/5 text-center transform transition hover:-translate-y-1 hover:shadow-xl hover:shadow-purple-500/10 ring-1 ring-gray-900/5">
-                        <p class="text-xs md:text-sm text-gray-400 font-bold uppercase tracking-wider mb-2">MA20</p>
-                        <p class="font-mono text-sm md:text-lg font-bold text-purple-600 tracking-tighter">{{
-                            ma20.result.toFixed(3) }}</p>
+                    <div>
+                        <label class="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">MA5_1
+                            (今日五日线)</label>
+                        <input type="number" v-model.number="ma5.ma5_1" step="0.001"
+                            class="w-full bg-gray-50 border-0 rounded-xl px-4 py-3 font-mono text-sm focus:ring-2 focus:ring-blue-500 focus:bg-white outline-none transition-all placeholder-gray-300"
+                            :class="{ 'bg-blue-50/50': loading }">
                     </div>
                 </div>
-            </transition>
-        </div>
-
-        <!-- Calculation Cards Grid -->
-        <div class="space-y-6">
-            <!-- MA5 Card -->
-            <div
-                class="bg-white rounded-3xl shadow-sm border-0 ring-1 ring-gray-900/5 overflow-hidden transition-all duration-300 hover:shadow-lg hover:shadow-blue-500/5">
-                <div class="px-6 py-5 flex items-center justify-between cursor-pointer bg-white hover:bg-gray-50 transition-colors border-b border-gray-100"
-                    @click="showMA5 = !showMA5">
-                    <div class="flex items-center">
-                        <div
-                            class="w-10 h-10 rounded-xl bg-blue-500 text-white flex items-center justify-center mr-4 font-bold text-sm shadow-md shadow-blue-500/20">
-                            5</div>
-                        <h3 class="font-bold text-gray-900 tracking-tight text-lg">MA5 <span
-                                class="font-normal text-gray-400 text-sm ml-1.5">周线趋势</span></h3>
-                    </div>
-                    <i :class="showMA5 ? 'rotate-180' : ''"
-                        class="fas fa-chevron-down text-gray-300 transition-transform duration-300"></i>
-                </div>
-
-                <div v-show="showMA5" class="p-6 bg-white">
-                    <div class="grid grid-cols-2 gap-5 mb-6">
-                        <div>
-                            <label class="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">A5
-                                (前5日收盘价)</label>
-                            <input type="number" v-model.number="ma5.a5" step="0.01"
-                                class="w-full bg-gray-50 border-0 rounded-xl px-4 py-3 font-mono text-sm focus:ring-2 focus:ring-blue-500 focus:bg-white outline-none transition-all placeholder-gray-300"
-                                :class="{ 'bg-blue-50/50': loading }">
-                        </div>
-                        <div>
-                            <label class="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">MA5_1
-                                (今日五日线)</label>
-                            <input type="number" v-model.number="ma5.ma5_1" step="0.001"
-                                class="w-full bg-gray-50 border-0 rounded-xl px-4 py-3 font-mono text-sm focus:ring-2 focus:ring-blue-500 focus:bg-white outline-none transition-all placeholder-gray-300"
-                                :class="{ 'bg-blue-50/50': loading }">
-                        </div>
-                    </div>
-                    <button @click="calculateMA5"
-                        class="w-full py-3.5 bg-blue-50 hover:bg-blue-100 text-blue-600 font-bold rounded-xl transition-colors text-sm mb-6 tracking-wide">
-                        计算 MA5
-                    </button>
-                    <div
-                        class="flex items-center justify-between p-4 bg-blue-50/50 rounded-2xl border border-blue-100/50 backdrop-blur-sm">
-                        <span class="text-xs font-bold text-blue-400 uppercase tracking-wider">计算结果</span>
-                        <span class="font-mono text-2xl font-bold text-blue-600">{{ ma5.result.toFixed(3) }}</span>
-                    </div>
-                </div>
-            </div>
-
-            <!-- MA10 Card -->
-            <div
-                class="bg-white rounded-3xl shadow-sm border-0 ring-1 ring-gray-900/5 overflow-hidden transition-all duration-300 hover:shadow-lg hover:shadow-amber-500/5">
-                <div class="px-6 py-5 flex items-center justify-between cursor-pointer bg-white hover:bg-gray-50 transition-colors border-b border-gray-100"
-                    @click="showMA10 = !showMA10">
-                    <div class="flex items-center">
-                        <div
-                            class="w-10 h-10 rounded-xl bg-amber-500 text-white flex items-center justify-center mr-4 font-bold text-sm shadow-md shadow-amber-500/20">
-                            10</div>
-                        <h3 class="font-bold text-gray-900 tracking-tight text-lg">MA10 <span
-                                class="font-normal text-gray-400 text-sm ml-1.5">半月线</span></h3>
-                    </div>
-                    <i :class="showMA10 ? 'rotate-180' : ''"
-                        class="fas fa-chevron-down text-gray-300 transition-transform duration-300"></i>
-                </div>
-
-                <div v-show="showMA10" class="p-6 bg-white">
-                    <div class="grid grid-cols-2 gap-5 mb-6">
-                        <div>
-                            <label class="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">A10
-                                (前10日收盘价)</label>
-                            <input type="number" v-model.number="ma10.a10" step="0.01"
-                                class="w-full bg-gray-50 border-0 rounded-xl px-4 py-3 font-mono text-sm focus:ring-2 focus:ring-amber-500 focus:bg-white outline-none transition-all placeholder-gray-300"
-                                :class="{ 'bg-amber-50/50': loading }">
-                        </div>
-                        <div>
-                            <label class="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">MA10_1
-                                (今日十日线)</label>
-                            <input type="number" v-model.number="ma10.ma10_1" step="0.001"
-                                class="w-full bg-gray-50 border-0 rounded-xl px-4 py-3 font-mono text-sm focus:ring-2 focus:ring-amber-500 focus:bg-white outline-none transition-all placeholder-gray-300"
-                                :class="{ 'bg-amber-50/50': loading }">
-                        </div>
-                    </div>
-                    <button @click="calculateMA10"
-                        class="w-full py-3.5 bg-amber-50 hover:bg-amber-100 text-amber-600 font-bold rounded-xl transition-colors text-sm mb-6 tracking-wide">
-                        计算 MA10
-                    </button>
-                    <div
-                        class="flex items-center justify-between p-4 bg-amber-50/50 rounded-2xl border border-amber-100/50 backdrop-blur-sm">
-                        <span class="text-xs font-bold text-amber-400 uppercase tracking-wider">计算结果</span>
-                        <span class="font-mono text-2xl font-bold text-amber-600">{{ ma10.result.toFixed(3) }}</span>
-                    </div>
-                </div>
-            </div>
-
-            <!-- MA20 Card -->
-            <div
-                class="bg-white rounded-3xl shadow-sm border-0 ring-1 ring-gray-900/5 overflow-hidden transition-all duration-300 hover:shadow-lg hover:shadow-purple-500/5">
-                <div class="px-6 py-5 flex items-center justify-between cursor-pointer bg-white hover:bg-gray-50 transition-colors border-b border-gray-100"
-                    @click="showMA20 = !showMA20">
-                    <div class="flex items-center">
-                        <div
-                            class="w-10 h-10 rounded-xl bg-purple-500 text-white flex items-center justify-center mr-4 font-bold text-sm shadow-md shadow-purple-500/20">
-                            20</div>
-                        <h3 class="font-bold text-gray-900 tracking-tight text-lg">MA20 <span
-                                class="font-normal text-gray-400 text-sm ml-1.5">月线趋势</span></h3>
-                    </div>
-                    <i :class="showMA20 ? 'rotate-180' : ''"
-                        class="fas fa-chevron-down text-gray-300 transition-transform duration-300"></i>
-                </div>
-
-                <div v-show="showMA20" class="p-6 bg-white">
-                    <div class="grid grid-cols-2 gap-5 mb-6">
-                        <div>
-                            <label class="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">A20
-                                (前20日收盘价)</label>
-                            <input type="number" v-model.number="ma20.a20" step="0.01"
-                                class="w-full bg-gray-50 border-0 rounded-xl px-4 py-3 font-mono text-sm focus:ring-2 focus:ring-purple-500 focus:bg-white outline-none transition-all placeholder-gray-300"
-                                :class="{ 'bg-purple-50/50': loading }">
-                        </div>
-                        <div>
-                            <label class="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">MA20_1
-                                (今日二十日线)</label>
-                            <input type="number" v-model.number="ma20.ma20_1" step="0.001"
-                                class="w-full bg-gray-50 border-0 rounded-xl px-4 py-3 font-mono text-sm focus:ring-2 focus:ring-purple-500 focus:bg-white outline-none transition-all placeholder-gray-300"
-                                :class="{ 'bg-purple-50/50': loading }">
-                        </div>
-                    </div>
-                    <button @click="calculateMA20"
-                        class="w-full py-3.5 bg-purple-50 hover:bg-purple-100 text-purple-600 font-bold rounded-xl transition-colors text-sm mb-6 tracking-wide">
-                        计算 MA20
-                    </button>
-                    <div
-                        class="flex items-center justify-between p-4 bg-purple-50/50 rounded-2xl border border-purple-100/50 backdrop-blur-sm">
-                        <span class="text-xs font-bold text-purple-400 uppercase tracking-wider">计算结果</span>
-                        <span class="font-mono text-2xl font-bold text-purple-600">{{ ma20.result.toFixed(3) }}</span>
-                    </div>
+                <button @click="calculateMA5"
+                    class="w-full py-3.5 bg-blue-50 hover:bg-blue-100 text-blue-600 font-bold rounded-xl transition-colors text-sm mb-6 tracking-wide">
+                    计算 MA5
+                </button>
+                <div
+                    class="flex items-center justify-between p-4 bg-blue-50/50 rounded-2xl border border-blue-100/50 backdrop-blur-sm">
+                    <span class="text-xs font-bold text-blue-400 uppercase tracking-wider">计算结果</span>
+                    <span class="font-mono text-2xl font-bold text-blue-600">{{ ma5.result.toFixed(3) }}</span>
                 </div>
             </div>
         </div>
 
-        <footer class="mt-12 text-center pb-8">
-            <p class="text-xs text-gray-400 font-bold tracking-widest uppercase opacity-70">© 2026 实时均线计算器</p>
-        </footer>
+        <!-- MA10 Card -->
+        <div
+            class="bg-white rounded-3xl shadow-sm border-0 ring-1 ring-gray-900/5 overflow-hidden transition-all duration-300 hover:shadow-lg hover:shadow-amber-500/5">
+            <div class="px-6 py-5 flex items-center justify-between cursor-pointer bg-white hover:bg-gray-50 transition-colors border-b border-gray-100"
+                @click="showMA10 = !showMA10">
+                <div class="flex items-center">
+                    <div
+                        class="w-10 h-10 rounded-xl bg-amber-500 text-white flex items-center justify-center mr-4 font-bold text-sm shadow-md shadow-amber-500/20">
+                        10</div>
+                    <h3 class="font-bold text-gray-900 tracking-tight text-lg">MA10 <span
+                            class="font-normal text-gray-400 text-sm ml-1.5">半月线</span></h3>
+                </div>
+                <i :class="showMA10 ? 'rotate-180' : ''"
+                    class="fas fa-chevron-down text-gray-300 transition-transform duration-300"></i>
+            </div>
 
-        <script src="js/app.js"></script>
+            <div v-show="showMA10" class="p-6 bg-white">
+                <div class="grid grid-cols-2 gap-5 mb-6">
+                    <div>
+                        <label class="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">A10
+                            (前10日收盘价)</label>
+                        <input type="number" v-model.number="ma10.a10" step="0.01"
+                            class="w-full bg-gray-50 border-0 rounded-xl px-4 py-3 font-mono text-sm focus:ring-2 focus:ring-amber-500 focus:bg-white outline-none transition-all placeholder-gray-300"
+                            :class="{ 'bg-amber-50/50': loading }">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">MA10_1
+                            (今日十日线)</label>
+                        <input type="number" v-model.number="ma10.ma10_1" step="0.001"
+                            class="w-full bg-gray-50 border-0 rounded-xl px-4 py-3 font-mono text-sm focus:ring-2 focus:ring-amber-500 focus:bg-white outline-none transition-all placeholder-gray-300"
+                            :class="{ 'bg-amber-50/50': loading }">
+                    </div>
+                </div>
+                <button @click="calculateMA10"
+                    class="w-full py-3.5 bg-amber-50 hover:bg-amber-100 text-amber-600 font-bold rounded-xl transition-colors text-sm mb-6 tracking-wide">
+                    计算 MA10
+                </button>
+                <div
+                    class="flex items-center justify-between p-4 bg-amber-50/50 rounded-2xl border border-amber-100/50 backdrop-blur-sm">
+                    <span class="text-xs font-bold text-amber-400 uppercase tracking-wider">计算结果</span>
+                    <span class="font-mono text-2xl font-bold text-amber-600">{{ ma10.result.toFixed(3) }}</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- MA20 Card -->
+        <div
+            class="bg-white rounded-3xl shadow-sm border-0 ring-1 ring-gray-900/5 overflow-hidden transition-all duration-300 hover:shadow-lg hover:shadow-purple-500/5">
+            <div class="px-6 py-5 flex items-center justify-between cursor-pointer bg-white hover:bg-gray-50 transition-colors border-b border-gray-100"
+                @click="showMA20 = !showMA20">
+                <div class="flex items-center">
+                    <div
+                        class="w-10 h-10 rounded-xl bg-purple-500 text-white flex items-center justify-center mr-4 font-bold text-sm shadow-md shadow-purple-500/20">
+                        20</div>
+                    <h3 class="font-bold text-gray-900 tracking-tight text-lg">MA20 <span
+                            class="font-normal text-gray-400 text-sm ml-1.5">月线趋势</span></h3>
+                </div>
+                <i :class="showMA20 ? 'rotate-180' : ''"
+                    class="fas fa-chevron-down text-gray-300 transition-transform duration-300"></i>
+            </div>
+
+            <div v-show="showMA20" class="p-6 bg-white">
+                <div class="grid grid-cols-2 gap-5 mb-6">
+                    <div>
+                        <label class="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">A20
+                            (前20日收盘价)</label>
+                        <input type="number" v-model.number="ma20.a20" step="0.01"
+                            class="w-full bg-gray-50 border-0 rounded-xl px-4 py-3 font-mono text-sm focus:ring-2 focus:ring-purple-500 focus:bg-white outline-none transition-all placeholder-gray-300"
+                            :class="{ 'bg-purple-50/50': loading }">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">MA20_1
+                            (今日二十日线)</label>
+                        <input type="number" v-model.number="ma20.ma20_1" step="0.001"
+                            class="w-full bg-gray-50 border-0 rounded-xl px-4 py-3 font-mono text-sm focus:ring-2 focus:ring-purple-500 focus:bg-white outline-none transition-all placeholder-gray-300"
+                            :class="{ 'bg-purple-50/50': loading }">
+                    </div>
+                </div>
+                <button @click="calculateMA20"
+                    class="w-full py-3.5 bg-purple-50 hover:bg-purple-100 text-purple-600 font-bold rounded-xl transition-colors text-sm mb-6 tracking-wide">
+                    计算 MA20
+                </button>
+                <div
+                    class="flex items-center justify-between p-4 bg-purple-50/50 rounded-2xl border border-purple-100/50 backdrop-blur-sm">
+                    <span class="text-xs font-bold text-purple-400 uppercase tracking-wider">计算结果</span>
+                    <span class="font-mono text-2xl font-bold text-purple-600">{{ ma20.result.toFixed(3) }}</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <footer class="mt-12 text-center pb-8">
+        <p class="text-xs text-gray-400 font-bold tracking-widest uppercase opacity-70">© 2026 实时均线计算器</p>
+    </footer>
+
 </body>
 
 </html>
