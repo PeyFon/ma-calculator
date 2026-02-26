@@ -288,7 +288,7 @@ window.MACalc = window.MACalc || {};
         ];
 
         // 请求间隔（毫秒）
-        static REQUEST_INTERVAL = 3000;
+        static REQUEST_INTERVAL = 2000;
         
         // 最大等待时间（毫秒）
         static MAX_WAIT_TIME = 30000;
@@ -543,7 +543,7 @@ window.MACalc = window.MACalc || {};
         ];
 
         // 请求间隔（毫秒）
-        static REQUEST_INTERVAL = 3000;
+        static REQUEST_INTERVAL = 2000;
         
         // 最大等待时间（毫秒）
         static MAX_WAIT_TIME = 30000;
