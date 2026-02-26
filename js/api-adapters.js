@@ -69,7 +69,16 @@ window.MACalc = window.MACalc || {};
          */
         getExchange(code, market) {
             if (market === 'HK') return 'HK';
-            return code.startsWith('6') ? 'SH' : 'SZ';
+            // 指数代码判断: 000xxx 开头的是上证指数 -> SH
+            if (code.startsWith('000')) {
+                return 'SH'; // 上证指数 000001 -> SH
+            }
+            // 6开头的是上交所股票
+            if (code.startsWith('6')) {
+                return 'SH';
+            }
+            // 其他(002xxx, 300xxx, 399xxx等)都是深交所
+            return 'SZ';
         }
 
         /**
@@ -377,7 +386,16 @@ window.MACalc = window.MACalc || {};
          * @returns {string} 0=深交所, 1=上交所
          */
         getSecid(code) {
-            return code.startsWith('6') ? '1.' : '0.';
+            // 指数代码判断: 000xxx 开头的是上证指数 (如000001, 000300)
+            if (code.startsWith('000')) {
+                return '1.'; // 上证指数 -> 1.000001
+            }
+            // 6开头的是上交所股票
+            if (code.startsWith('6')) {
+                return '1.'; // 上交所 -> 1.600000
+            }
+            // 其他(002xxx, 300xxx, 399xxx等)都是深交所
+            return '0.'; // 深交所 -> 0.002709
         }
 
         /**
@@ -634,11 +652,24 @@ window.MACalc = window.MACalc || {};
          */
         getTencentPrefix(code, market) {
             if (market === 'HK') {
-                // 港股代码需要补齐5位：00700 -> hk00700
+                // 港股指数代码 (如HSTECH, HSI) 保持原样
+                if (/^[A-Z]+$/.test(code)) {
+                    return 'hk' + code;
+                }
+                // 港股股票代码需要补齐5位：00700 -> hk00700
                 const padded = String(code).padStart(5, '0');
                 return 'hk' + padded;
             }
-            return code.startsWith('6') ? 'sh' + code : 'sz' + code;
+            // 指数代码判断: 000xxx 开头的是上证指数 -> sh
+            if (code.startsWith('000')) {
+                return 'sh' + code; // 上证指数 000001 -> sh000001
+            }
+            // 6开头的是上交所股票
+            if (code.startsWith('6')) {
+                return 'sh' + code;
+            }
+            // 其他(002xxx, 300xxx, 399xxx等)都是深交所
+            return 'sz' + code;
         }
 
         /**

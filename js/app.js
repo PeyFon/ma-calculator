@@ -84,8 +84,17 @@ window.MACalc = window.MACalc || {};
         if (market === "HK") {
           for (const stock of stocks) {
             const code = stock.Code;
+            
+            // 优先匹配5位数字代码 (港股如00700)
             if (/^0\d{4}$/.test(code)) {
-              // 港股代码保持5位格式 (00700)
+              return {
+                code: code,
+                name: stock.Name,
+                fullCode: "hk" + code
+              };
+            }
+            // 匹配港股指数代码 (如HSTECH, HSI)
+            if (/^[A-Z]+$/.test(code) && (stock.Classify === 'UniversalIndex' || stock.SecurityType === '11')) {
               return {
                 code: code,
                 name: stock.Name,
@@ -249,8 +258,9 @@ window.MACalc = window.MACalc || {};
 
           // 验证最终代码格式
           if (currentMarket === "HK") {
-            if (!/^\d{1,5}$/.test(actualCode))
-              throw new Error("请输入正确的港股代码（1-5位数字）");
+            // 支持数字代码(1-5位)或字母代码(港股指数如HSTECH, HSI)
+            if (!(/^\d{1,5}$/.test(actualCode) || /^[A-Z]{2,10}$/.test(actualCode)))
+              throw new Error("请输入正确的港股代码（1-5位数字或字母指数代码）");
           } else {
             if (!/^\d{6}$/.test(actualCode))
               throw new Error("请输入正确的 A 股代码（6位数字）");
