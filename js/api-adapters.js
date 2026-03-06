@@ -69,15 +69,27 @@ window.MACalc = window.MACalc || {};
          */
         getExchange(code, market) {
             if (market === 'HK') return 'HK';
-            // 指数代码判断: 000xxx 开头的是上证指数 -> SH
-            if (code.startsWith('000')) {
-                return 'SH'; // 上证指数 000001 -> SH
-            }
             // 6开头的是上交所股票
             if (code.startsWith('6')) {
                 return 'SH';
             }
-            // 其他(002xxx, 300xxx, 399xxx等)都是深交所
+            // 000 开头的判断：
+            // A股中，000xxx 既有上证指数也有深证股票
+            // 上证指数通常是：000001(上证指数), 000300(沪深300), 000016(上证50), 000688(科创50)等
+            // 但是深证 A 股也是 000xxx 开头。
+            // 这里的逻辑需要和搜索结果配合。如果搜索出来的 MktNum 是 1 则是 SH。
+            // 默认情况下，000开头的 A 股（非指数）在深交所。
+            // 鉴于本项目主要通过搜索获取，此处做一个基础兜底判断：
+            // 典型的上证指数代码 (000001, 000300, 000010, 000016, 000905等)
+            const shIndices = ['000001', '000002', '000003', '000010', '000016', '000300', '000905', '000688'];
+            if (shIndices.includes(code)) {
+                return 'SH';
+            }
+            // 其他 000, 001, 002, 300, 399 均属于深圳
+            if (code.startsWith('000') || code.startsWith('001') || code.startsWith('002') || code.startsWith('300') || code.startsWith('399')) {
+                return 'SZ';
+            }
+            // 默认
             return 'SZ';
         }
 
@@ -386,16 +398,17 @@ window.MACalc = window.MACalc || {};
          * @returns {string} 0=深交所, 1=上交所
          */
         getSecid(code) {
-            // 指数代码判断: 000xxx 开头的是上证指数 (如000001, 000300)
-            if (code.startsWith('000')) {
-                return '1.'; // 上证指数 -> 1.000001
-            }
             // 6开头的是上交所股票
             if (code.startsWith('6')) {
                 return '1.'; // 上交所 -> 1.600000
             }
-            // 其他(002xxx, 300xxx, 399xxx等)都是深交所
-            return '0.'; // 深交所 -> 0.002709
+            // 典型的上证指数代码
+            const shIndices = ['000001', '000002', '000003', '000010', '000016', '000300', '000905', '000688'];
+            if (shIndices.includes(code)) {
+                return '1.'; 
+            }
+            // 其他(000, 001, 002, 300, 399等)都是深交所
+            return '0.'; 
         }
 
         /**
@@ -660,15 +673,16 @@ window.MACalc = window.MACalc || {};
                 const padded = String(code).padStart(5, '0');
                 return 'hk' + padded;
             }
-            // 指数代码判断: 000xxx 开头的是上证指数 -> sh
-            if (code.startsWith('000')) {
-                return 'sh' + code; // 上证指数 000001 -> sh000001
-            }
             // 6开头的是上交所股票
             if (code.startsWith('6')) {
                 return 'sh' + code;
             }
-            // 其他(002xxx, 300xxx, 399xxx等)都是深交所
+            // 典型的上证指数代码
+            const shIndices = ['000001', '000002', '000003', '000010', '000016', '000300', '000905', '000688'];
+            if (shIndices.includes(code)) {
+                return 'sh' + code;
+            }
+            // 其他(000, 001, 002, 300, 399等)都是深交所
             return 'sz' + code;
         }
 
