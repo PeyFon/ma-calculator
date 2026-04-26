@@ -46,6 +46,91 @@ window.MACalc = window.MACalc || {};
     }
 
     /**
+     * JSONP 辅助方法
+     * @param {string} url - 请求URL
+     * @param {string} callbackName - 回调函数名
+     * @param {number} timeout - 超时时间(ms)
+     * @returns {Promise<any>}
+     */
+    function fetchJSONP(url, callbackName, timeout = 10000) {
+        return new Promise((resolve, reject) => {
+            const script = document.createElement('script');
+            let timeoutId;
+            
+            // 清理函数
+            const cleanup = () => {
+                if (timeoutId) clearTimeout(timeoutId);
+                if (script.parentNode) script.parentNode.removeChild(script);
+                if (window[callbackName]) delete window[callbackName];
+            };
+            
+            // 设置超时
+            timeoutId = setTimeout(() => {
+                cleanup();
+                reject(new Error('JSONP 请求超时'));
+            }, timeout);
+            
+            // 绑定回调
+            window[callbackName] = (data) => {
+                cleanup();
+                resolve(data);
+            };
+            
+            // 错误处理
+            script.onerror = () => {
+                cleanup();
+                reject(new Error('JSONP 请求失败'));
+            };
+            
+            script.src = url;
+            document.head.appendChild(script);
+        });
+    }
+
+    /**
+     * 针对腾讯股票数据特殊格式的 Script 注入辅助方法
+     * 不使用回调函数，而是监听脚本加载完成，然后读取全局变量
+     * @param {string} url - 请求URL
+     * @param {string} varName - 全局变量名
+     * @param {number} timeout - 超时时间(ms)
+     * @returns {Promise<any>}
+     */
+    function fetchScriptVar(url, varName, timeout = 10000) {
+        return new Promise((resolve, reject) => {
+            const script = document.createElement('script');
+            let timeoutId;
+            
+            const cleanup = () => {
+                if (timeoutId) clearTimeout(timeoutId);
+                if (script.parentNode) script.parentNode.removeChild(script);
+            };
+            
+            timeoutId = setTimeout(() => {
+                cleanup();
+                reject(new Error('脚本请求超时'));
+            }, timeout);
+            
+            script.onload = () => {
+                cleanup();
+                if (window[varName] !== undefined) {
+                    const data = window[varName];
+                    resolve(data);
+                } else {
+                    reject(new Error(`未找到全局变量 ${varName}`));
+                }
+            };
+            
+            script.onerror = () => {
+                cleanup();
+                reject(new Error('脚本请求失败'));
+            };
+            
+            script.src = url;
+            document.head.appendChild(script);
+        });
+    }
+
+    /**
      * 股票数据适配器基类
      * @class
      */
@@ -298,16 +383,9 @@ window.MACalc = window.MACalc || {};
     /**
      * 东方财富 API 适配器
      * @extends BaseAdapter
-     * 无需API Key，直接使用CORS代理访问
-     * 特性：5秒间隔请求 + 代理切换 + 指数退避重试
+     * 无需API Key，直接使用 JSONP 访问
      */
     class EastMoneyAdapter extends BaseAdapter {
-        // CORS代理列表（corsproxy.io优先，r.jina.ai对东方财富有限制）
-        static CORS_PROXIES = [
-            'https://corsproxy.io/?',
-            'https://r.jina.ai/http://'
-        ];
-
         // 请求间隔（毫秒）
         static REQUEST_INTERVAL = 2000;
         
@@ -319,7 +397,6 @@ window.MACalc = window.MACalc || {};
 
         constructor() {
             super();
-            this.proxyIndex = 0;
             this.lastRequestTime = 0;
         }
 
@@ -349,50 +426,6 @@ window.MACalc = window.MACalc || {};
         }
 
         /**
-         * 获取当前代理URL
-         * @returns {string}
-         */
-        getCurrentProxy() {
-            return EastMoneyAdapter.CORS_PROXIES[this.proxyIndex];
-        }
-
-        /**
-         * 切换到下一个代理
-         */
-        switchProxy() {
-            this.proxyIndex = (this.proxyIndex + 1) % EastMoneyAdapter.CORS_PROXIES.length;
-        }
-
-        /**
-         * 构建代理URL
-         * @param {string} url - 目标URL
-         * @returns {string}
-         */
-        buildProxyUrl(url) {
-            const proxy = this.getCurrentProxy();
-            
-            // jina.ai代理格式：https://r.jina.ai/http:// + 目标URL(不带协议)
-            if (proxy.includes('r.jina.ai')) {
-                // 移除协议前缀
-                let targetUrl = url;
-                if (url.startsWith('http://')) {
-                    targetUrl = url.substring(7);
-                } else if (url.startsWith('https://')) {
-                    targetUrl = url.substring(8);
-                }
-                return `${proxy}${encodeURIComponent(targetUrl)}`;
-            }
-            
-            // corsproxy.io格式：https://corsproxy.io/?url= + 完整URL
-            if (proxy.includes('corsproxy.io')) {
-                return `${proxy}${encodeURIComponent(url)}`;
-            }
-            
-            // 其他代理：完整URL编码
-            return `${proxy}${encodeURIComponent(url)}`;
-        }
-
-        /**
          * 获取东方财富市场前缀
          * @param {string} code 
          * @returns {string} 0=深交所, 1=上交所
@@ -412,41 +445,18 @@ window.MACalc = window.MACalc || {};
         }
 
         /**
-         * 通过东方财富搜索API获取股票名称
+         * 通过东方财富搜索API获取股票名称 (当前已被app.js内直连腾讯接口取代，此为备用)
          * @param {string} code 
          * @param {string} apiKey (不使用)
          * @param {string} market 
          * @returns {Promise<string|null>}
          */
         async fetchStockName(code, apiKey, market) {
-            if (market === 'HK') return null; // 东方财富主要支持A股
-            
-            // 等待间隔
-            await this.waitForInterval();
-            
-            const searchUrl = `https://searchapi.eastmoney.com/api/suggest/get?input=${code}&type=14&count=1`;
-            const proxyUrl = this.buildProxyUrl(searchUrl);
-            
-            try {
-                const response = await fetchWithTimeout(proxyUrl, {}, 10000);
-                const text = await response.text();
-                
-                // 提取JSON
-                const mdMatch = text.match(/\{[\s\S]*\}/);
-                if (!mdMatch) return null;
-                
-                const data = JSON.parse(mdMatch[0]);
-                if (data.QuotationCodeTable?.Data?.length > 0) {
-                    return data.QuotationCodeTable.Data[0].Name || null;
-                }
-                return null;
-            } catch (e) {
-                return null;
-            }
+            return null; // app.js 已经全部统一使用腾讯接口查名称，此处留空即可
         }
 
         /**
-         * 获取股票日K线数据（带限流和重试机制）
+         * 获取股票日K线数据（支持跨域JSONP直连，无需代理）
          * @param {string} code 
          * @param {string} apiKey (不使用)
          * @param {string} market 
@@ -458,76 +468,24 @@ window.MACalc = window.MACalc || {};
             }
 
             const secid = this.getSecid(code);
-            const klineUrl = `https://push2his.eastmoney.com/api/qt/stock/kline/get?secid=${secid}${code}&fields1=f1,f2,f3,f4,f5,f6&fields2=f51,f52,f53,f54,f55,f56,f57,f58,f59,f60,f61&klt=101&fqt=0&end=20500101&lmt=25`;
-
-            // 等待请求间隔
-            await this.waitForInterval();
+            const callbackName = `cb_eastmoney_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
+            const klineUrl = `https://push2his.eastmoney.com/api/qt/stock/kline/get?secid=${secid}${code}&fields1=f1,f2,f3,f4,f5,f6&fields2=f51,f52,f53,f54,f55,f56,f57,f58,f59,f60,f61&klt=101&fqt=0&end=20500101&lmt=25&cb=${callbackName}`;
 
             let totalWaitTime = 0;
             let retryCount = 0;
 
             while (retryCount < EastMoneyAdapter.MAX_RETRIES) {
                 try {
-                    const proxyUrl = this.buildProxyUrl(klineUrl);
-                    const response = await fetchWithTimeout(proxyUrl, {}, 15000);
-
-                    if (!response.ok) {
-                        // 限流或其他错误
-                        if (response.status === 429 || response.status >= 500) {
-                            // 指数退避
-                            const waitTime = Math.pow(2, retryCount) * 1000;
-                            totalWaitTime += waitTime;
-                            
-                            if (totalWaitTime >= EastMoneyAdapter.MAX_WAIT_TIME) {
-                                // 切换代理重试
-                                this.switchProxy();
-                                totalWaitTime = 0;
-                                retryCount++;
-                                await this.sleep(1000);
-                                continue;
-                            }
-                            
-                            await this.sleep(waitTime);
-                            retryCount++;
-                            continue;
-                        }
-                        throw new Error(`API响应异常 (HTTP ${response.status})`);
-                    }
-
-                    const text = await response.text();
-                    let data;
-                    try {
-                        data = JSON.parse(text);
-                    } catch (e) {
-                        const mdMatch = text.match(/\{[\s\S]*\}/);
-                        if (mdMatch) {
-                            data = JSON.parse(mdMatch[0]);
-                        } else {
-                            throw new Error('数据解析失败');
-                        }
-                    }
-
+                    // 使用原生的 JSONP 方法请求东财数据，直接绕过 CORS
+                    const data = await fetchJSONP(klineUrl, callbackName, 10000);
                     return this.parseEastMoneyData(data, code);
-
                 } catch (error) {
-                    // 网络错误或其他异常
-                    totalWaitTime += 2000;
-                    
-                    if (totalWaitTime >= EastMoneyAdapter.MAX_WAIT_TIME) {
-                        // 切换代理重试
-                        this.switchProxy();
-                        totalWaitTime = 0;
-                        retryCount++;
-                        await this.sleep(1000);
-                        continue;
-                    }
-                    
-                    await this.sleep(2000);
                     retryCount++;
+                    await this.sleep(1000 * retryCount);
                 }
             }
 
-            throw new Error('数据请求失败，请稍后重试');
+            throw new Error('东方财富数据请求失败，请检查网络');
         }
 
         parseEastMoneyData(data, code) {
@@ -564,27 +522,17 @@ window.MACalc = window.MACalc || {};
      * 腾讯财经 API 适配器
      * @extends BaseAdapter
      * 用于港股数据，A股也支持
-     * 特性：5秒间隔请求 + 代理切换 + 指数退避重试
+     * 特性：直接使用 Script 注入访问
      */
     class TencentAdapter extends BaseAdapter {
-        // CORS代理列表
-        static CORS_PROXIES = [
-            'https://r.jina.ai/http://',
-            'https://corsproxy.io/?'
-        ];
-
         // 请求间隔（毫秒）
         static REQUEST_INTERVAL = 2000;
-        
-        // 最大等待时间（毫秒）
-        static MAX_WAIT_TIME = 30000;
         
         // 最大重试次数
         static MAX_RETRIES = 3;
 
         constructor() {
             super();
-            this.proxyIndex = 0;
             this.lastRequestTime = 0;
         }
 
@@ -611,50 +559,6 @@ window.MACalc = window.MACalc || {};
             }
             
             this.lastRequestTime = Date.now();
-        }
-
-        /**
-         * 获取当前代理URL
-         * @returns {string}
-         */
-        getCurrentProxy() {
-            return TencentAdapter.CORS_PROXIES[this.proxyIndex];
-        }
-
-        /**
-         * 切换到下一个代理
-         */
-        switchProxy() {
-            this.proxyIndex = (this.proxyIndex + 1) % TencentAdapter.CORS_PROXIES.length;
-        }
-
-        /**
-         * 构建代理URL
-         * @param {string} url - 目标URL
-         * @returns {string}
-         */
-        buildProxyUrl(url) {
-            const proxy = this.getCurrentProxy();
-            
-            // jina.ai代理格式：https://r.jina.ai/http:// + 目标URL(不带协议)
-            if (proxy.includes('r.jina.ai')) {
-                // 移除协议前缀
-                let targetUrl = url;
-                if (url.startsWith('http://')) {
-                    targetUrl = url.substring(7);
-                } else if (url.startsWith('https://')) {
-                    targetUrl = url.substring(8);
-                }
-                return `${proxy}${encodeURIComponent(targetUrl)}`;
-            }
-            
-            // corsproxy.io格式：https://corsproxy.io/?url= + 完整URL
-            if (proxy.includes('corsproxy.io')) {
-                return `${proxy}${encodeURIComponent(url)}`;
-            }
-            
-            // 其他代理：完整URL编码
-            return `${proxy}${encodeURIComponent(url)}`;
         }
 
         /**
@@ -688,36 +592,30 @@ window.MACalc = window.MACalc || {};
 
         /**
          * 通过腾讯接口获取股票名称（支持A股和港股）
+         * 使用 Script 注入方式，解决跨域问题
          * @param {string} code 
          * @param {string} apiKey (不使用)
          * @param {string} market 
          * @returns {Promise<string|null>}
          */
         async fetchStockName(code, apiKey, market) {
-            // 等待间隔
-            await this.waitForInterval();
-            
             const prefix = this.getTencentPrefix(code, market);
             const url = `https://qt.gtimg.cn/q=${prefix}`;
-            const proxyUrl = this.buildProxyUrl(url);
+            // 腾讯 qt 接口返回如: v_sz000001="..."
+            const varName = `v_${prefix}`;
             
             try {
-                const response = await fetchWithTimeout(proxyUrl, {}, 10000);
-                const text = await response.text();
-                
-                // 解析返回数据：var v_sz000001="1~平安银行~000001~12.34~..." 或 v_hk00700="61~腾讯控股~00700~..."
-                // 支持两种格式：var v_xxx="..." 和 v_xxx="..."
-                let match = text.match(/var\s+v_\w+="([^"]+)"/);
-                if (!match) match = text.match(/v_\w+="([^"]+)"/);
-                
-                if (match) {
-                    const parts = match[1].split('~');
+                // 直接使用 Script 注入方式
+                const dataStr = await fetchScriptVar(url, varName, 10000);
+                if (dataStr && typeof dataStr === 'string') {
+                    const parts = dataStr.split('~');
                     if (parts.length > 1) {
                         return parts[1] || null;
                     }
                 }
                 return null;
             } catch (e) {
+                console.warn("腾讯名称接口请求失败", e);
                 return null;
             }
         }
@@ -731,75 +629,21 @@ window.MACalc = window.MACalc || {};
          */
         async fetchStockData(code, apiKey, market) {
             // 腾讯财经API - 获取历史K线
-            // 使用web.ifzq.gtimg.cn获取K线数据
             const prefix = this.getTencentPrefix(code, market);
-            const klineUrl = `https://web.ifzq.gtimg.cn/appstock/app/fqkline/get?param=${prefix},day,,,320,qfq`;
+            // 我们可以利用 _var 参数让它返回指定的变量名，天然支持类似 JSONP 的写法
+            // 例如: https://web.ifzq.gtimg.cn/appstock/app/fqkline/get?param=sz000001,day,,,320,qfq&_var=klineData_sz000001
+            const varName = `klineData_${prefix}_${Date.now()}`;
+            const klineUrl = `https://web.ifzq.gtimg.cn/appstock/app/fqkline/get?param=${prefix},day,,,320,qfq&_var=${varName}`;
             
-            // 等待请求间隔
-            await this.waitForInterval();
-
-            let totalWaitTime = 0;
-            let retryCount = 0;
-
-            while (retryCount < TencentAdapter.MAX_RETRIES) {
-                try {
-                    const proxyUrl = this.buildProxyUrl(klineUrl);
-                    const response = await fetchWithTimeout(proxyUrl, {}, 15000);
-
-                    if (!response.ok) {
-                        if (response.status === 429 || response.status >= 500) {
-                            const waitTime = Math.pow(2, retryCount) * 1000;
-                            totalWaitTime += waitTime;
-                            
-                            if (totalWaitTime >= TencentAdapter.MAX_WAIT_TIME) {
-                                this.switchProxy();
-                                totalWaitTime = 0;
-                                retryCount++;
-                                await this.sleep(1000);
-                                continue;
-                            }
-                            
-                            await this.sleep(waitTime);
-                            retryCount++;
-                            continue;
-                        }
-                        throw new Error(`API响应异常 (HTTP ${response.status})`);
-                    }
-
-                    const text = await response.text();
-                    let data;
-                    try {
-                        data = JSON.parse(text);
-                    } catch (e) {
-                        const mdMatch = text.match(/\{[\s\S]*\}/);
-                        if (mdMatch) {
-                            data = JSON.parse(mdMatch[0]);
-                        } else {
-                            throw new Error('数据解析失败');
-                        }
-                    }
-
-                    return this.parseTencentData(data, code, market);
-
-                } catch (error) {
-                    totalWaitTime += 2000;
-                    
-                    if (totalWaitTime >= TencentAdapter.MAX_WAIT_TIME) {
-                        this.switchProxy();
-                        totalWaitTime = 0;
-                        retryCount++;
-                        await this.sleep(1000);
-                        continue;
-                    }
-                    
-                    await this.sleep(2000);
-                    retryCount++;
-                }
+            try {
+                // 通过 script 标签跨域加载，完成后从全局变量里取数据
+                const data = await fetchScriptVar(klineUrl, varName, 15000);
+                return this.parseTencentData(data, code, market);
+            } catch (e) {
+                throw new Error(`数据请求失败，请稍后重试: ${e.message}`);
             }
-
-            throw new Error('数据请求失败，请稍后重试');
         }
-
+        
         parseTencentData(data, code, market) {
             // 腾讯返回数据结构: { data: { "hk00700": { day: [...], qt: {...} } } }
             // 注意：港股返回的是 day 字段，不是 qfqday

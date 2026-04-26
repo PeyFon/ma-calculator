@@ -59,69 +59,71 @@ window.MACalc = window.MACalc || {};
   }
 
   /**
-   * 通过东方财富接口查询股票代码
+   * 通过东方财富接口查询股票代码（使用 JSONP 绕过跨域限制）
    * @param {string} name - 股票名称或部分代码
    * @param {string} market - 目标市场 (CN/HK)
    * @returns {Promise<Object|null>}
    */
   async function searchStockCodeByName(name, market) {
-    const searchUrl = `https://searchapi.eastmoney.com/api/suggest/get?input=${encodeURIComponent(name)}&type=14&count=10`;
+    return new Promise((resolve) => {
+      const callbackName = `cb_suggest_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
+      const url = `https://searchapi.eastmoney.com/api/suggest/get?input=${encodeURIComponent(name)}&type=14&count=10&cb=${callbackName}`;
 
-    try {
-      const text = await fetchWithCorsProxies(searchUrl);
+      const script = document.createElement('script');
+      let timeoutId;
       
-      let jsonText = text;
-      const mdMatch = text.match(/\{[\s\S]*\}/);
-      if (mdMatch) {
-        jsonText = mdMatch[0];
-      }
+      const cleanup = () => {
+          if (timeoutId) clearTimeout(timeoutId);
+          if (script.parentNode) script.parentNode.removeChild(script);
+          if (window[callbackName]) delete window[callbackName];
+      };
       
-      const data = JSON.parse(jsonText);
+      timeoutId = setTimeout(() => {
+          cleanup();
+          resolve(null);
+      }, 5000);
       
-      if (data.QuotationCodeTable?.Data?.length > 0) {
-        const stocks = data.QuotationCodeTable.Data;
-        
-        if (market === "HK") {
-          for (const stock of stocks) {
-            const code = stock.Code;
-            
-            // 优先匹配5位数字代码 (港股如00700)
-            if (/^0\d{4}$/.test(code)) {
-              return {
-                code: code,
-                name: stock.Name,
-                fullCode: "hk" + code
-              };
-            }
-            // 匹配港股指数代码 (如HSTECH, HSI)
-            if (/^[A-Z]+$/.test(code) && (stock.Classify === 'UniversalIndex' || stock.SecurityType === '11')) {
-              return {
-                code: code,
-                name: stock.Name,
-                fullCode: "hk" + code
-              };
-            }
+      window[callbackName] = (data) => {
+          cleanup();
+          if (data && data.QuotationCodeTable && data.QuotationCodeTable.Data && data.QuotationCodeTable.Data.length > 0) {
+              const stocks = data.QuotationCodeTable.Data;
+              
+              if (market === "HK") {
+                  for (const stock of stocks) {
+                      const code = stock.Code;
+                      // 优先匹配5位数字代码 (港股如00700)
+                      if (/^0\d{4}$/.test(code)) {
+                          resolve({ code: code, name: stock.Name, fullCode: "hk" + code });
+                          return;
+                      }
+                      // 匹配港股指数代码 (如HSTECH, HSI)
+                      if (/^[A-Z]+$/.test(code) && (stock.Classify === 'UniversalIndex' || stock.SecurityType === '11')) {
+                          resolve({ code: code, name: stock.Name, fullCode: "hk" + code });
+                          return;
+                      }
+                  }
+              } else {
+                  for (const stock of stocks) {
+                      const code = stock.Code;
+                      if (/^\d{6}$/.test(code)) {
+                          const prefix = stock.MktNum === "1" ? "sh" : "sz";
+                          resolve({ code: code, name: stock.Name, fullCode: prefix + code });
+                          return;
+                      }
+                  }
+              }
           }
-          return null;
-        } else {
-          for (const stock of stocks) {
-            const code = stock.Code;
-            if (/^\d{6}$/.test(code)) {
-              const prefix = stock.MktNum === "1" ? "sh" : "sz";
-              return {
-                code: code,
-                name: stock.Name,
-                fullCode: prefix + code
-              };
-            }
-          }
-        }
-      }
-      return null;
-    } catch (e) {
-      console.error("搜索股票失败:", e);
-      return null;
-    }
+          resolve(null);
+      };
+      
+      script.onerror = () => {
+          cleanup();
+          resolve(null);
+      };
+      
+      script.src = url;
+      document.head.appendChild(script);
+    });
   }
 
   // 创建Vue实例
